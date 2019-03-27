@@ -1,6 +1,7 @@
 # PAL - A fast DNN optimization method based on curvature information
 This repository provides Tensorflow and Pytorch reference implementations for PAL.
 Note that these optimizations are not fully optimized. This means that more well-engineered implementations could deliver even faster performance.
+
 If you have any questions or suggestions, please do not hesitate to contact me.: maximus.mutschler(at)uni-tuebingen.de
 
 ## Short introduction to PAL:
