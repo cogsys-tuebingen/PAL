@@ -3,12 +3,12 @@ This repository provides Tensorflow and Pytorch reference implementations for PA
 Note that these optimizations are not fully optimized. This means that more well-engineered implementations could deliver even faster performance.
 If you have any questions or suggestions, please do not hesitate to contact me.: maximus.mutschler(at)uni-tuebingen.de
 
-## Short introduction to PALS:
+## Short introduction to PAL:
 
 <img src="/Images/explanation.png " title="PALS' basic idea" alt="PALS' basic idea" width="400"/> 
 <!-- d align="right"> Fig1: PALS' basic idea </a> -->
 
-***Fig1: PALS' basic idea*** 
+***Fig1: PAL's basic idea*** 
 
 
 PAL is based on the empirical observarion that the loss function can be approximated by a one-dimensional parabola in negative gradient direction.
@@ -19,7 +19,7 @@ For a detailed explanation, please refer to the our paper.: TODO
 
 <img src="/Images/ResNetCifarMin30.png" title="Performance of PALS" alt="Performance of PALS" width="420" />
 
-***Fig2: Performance of PALS***
+***Fig2: Performance of PAL***
 
 ## The hyper parameters:
 
@@ -59,7 +59,7 @@ For a detailed explanation, please refer to our paper: TODO
 </table> 
 
 We used an epochwise exponential dicay for &lambda; amd a<sub>max</sub>. Good decay rates are: 0.85, 0.95 .
-## PALS limitations:
+## PAL's limitations:
 - The DNN must not contain any random components such as Dropout or ShakeDrop. This is because PALS requires two loss values of the same deterministic function (= two network inferences) to determine an update step. Otherwise the function would not be continuous and a parabolic approximation is not be possible. However, if these random component implementations could be changed so that drawn random numbers could be reused for at least two inferences, PALS would also support these operations.
 - The PALS update step takes about 1.5 times longer than for ADAM or SGD, but still converges at least as fast.
 - With the state of the art of Tensorflow it was not possible for us to write a completely graph-based optimizer. Therefore it cannot be used like other Tensorflow optimizers. Have a look into the example code! This is not the case with Pytorch.
@@ -80,7 +80,7 @@ We used an epochwise exponential dicay for &lambda; amd a<sub>max</sub>. Good de
     - Have a look into the example code to see how to use it.
 - parabola approximations and loss lines can be plotted
 
-## Virtual Environment
+## Virtual environment
 A virtual environment capable of executing the provided code can be created with the provided python_vritual_env_requirements.txt
 
 
