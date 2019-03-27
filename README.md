@@ -1,6 +1,7 @@
 # PAL - A fast DNN optimization method based on curvature information
 This repository provides Tensorflow and Pytorch reference implementations for PAL.
 Note that these optimizations are not fully optimized. This means that more well-engineered implementations could deliver even faster performance.
+If you have any questions or suggestions, please do not hesitate to contact me.: maximus.mutschler(at)uni-tuebingen.de
 
 ## Short introduction to PALS:
 
@@ -68,7 +69,6 @@ We used an epochwise exponential dicay for &lambda; amd a<sub>max</sub>. Good de
 - Runs with PyTorch 1.0
 - Uses tensorboardX for plotting
 - parabola approximations and loss lines can be plotted
-=======
 
 
 ## Tensorflow implementation:
@@ -80,7 +80,8 @@ We used an epochwise exponential dicay for &lambda; amd a<sub>max</sub>. Good de
     - Have a look into the example code to see how to use it.
 - parabola approximations and loss lines can be plotted
 
-
+## Virtual Environment
+A virtual environment capable of executing the provided code can be created with the provided python_vritual_env_requirements.txt
 
 
 
