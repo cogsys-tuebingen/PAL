@@ -31,7 +31,7 @@ For a detailed explanation, please refer to our paper: TODO
     <th>Abbreviation  </th>
     <th>Name</th>
     <th>Description   </th>
-    <th>Default Parameters   </th>
+    <th>Default parameter intervalls   </th>
   </tr>
   <tr>
     <td>&mu; </th>
@@ -43,7 +43,7 @@ For a detailed explanation, please refer to our paper: TODO
     <td> &lambda; </td>
     <td>loose approximation factor </td>
     <td> change of the curvature of the approximated parabola</td>
-    <td>0,0.6   </td>
+    <td>0 or 0.6   </td>
   </tr>
   <tr>
     <td>&alpha;</td>
