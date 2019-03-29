@@ -16,7 +16,7 @@ PAL is based on the empirical observarion that the loss function can be approxim
 PAL performs a variable update step by jumping into the minima of an approximated parabola. To do this, the first and second derivatives in the direction of the negative gradient are calculated using two loss values and one gradient. Then a Newton update step is performed.
 PAL's performance matches or exceeds ADAM's and SGD's performance on VGG-16, ResNet-32, ResNET-34 and DenseNet-40 architectures trained on CIFAR-10.
 Especially on ResNet architectures PALS shows an excellent performance.
-For a detailed explanation, please refer to the our paper.: TODO
+For a detailed explanation, please refer to the our paper.: https://arxiv.org/abs/1903.11991
 
 <img src="/Images/ResNetCifarMin30.png" title="Performance of PALS" alt="Performance of PALS" width="420" />
 
@@ -24,7 +24,7 @@ For a detailed explanation, please refer to the our paper.: TODO
 
 ## The hyper parameters:
 
-For a detailed explanation, please refer to our paper: TODO
+For a detailed explanation, please refer to our paper: https://arxiv.org/abs/1903.11991
 
  <table style="width:100%">
     <tr>
