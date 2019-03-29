@@ -59,7 +59,7 @@ For a detailed explanation, please refer to our paper: https://arxiv.org/abs/190
   </tr>
 </table> 
 
-We used an epochwise exponential dicay for &lambda; amd a<sub>max</sub>. Good decay rates are: 0.85, 0.95 .
+We used an epochwise exponential decay for &lambda; and a<sub>max</sub>. Good decay rates are: 0.85, 0.95.
 ## PAL's limitations:
 - The DNN must not contain any random components such as Dropout or ShakeDrop. This is because PALS requires two loss values of the same deterministic function (= two network inferences) to determine an update step. Otherwise the function would not be continuous and a parabolic approximation is not be possible. However, if these random component implementations could be changed so that drawn random numbers could be reused for at least two inferences, PALS would also support these operations.
 - The PALS update step takes about 1.5 times longer than for ADAM or SGD, but still converges at least as fast.
