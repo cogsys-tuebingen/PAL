@@ -3,7 +3,7 @@ This repository provides Tensorflow and Pytorch reference implementations for PA
 Note that these implementations
 are not fully optimized. This means that more well-engineered implementations could deliver even faster performance.
 
-If you have any questions or suggestions, please do not hesitate to contact me.: maximus.mutschler(at)uni-tuebingen.de
+If you have any questions or suggestions, please do not hesitate to contact me: maximus.mutschler(at)uni-tuebingen.de
 
 ## Short introduction to PAL:
 
@@ -79,7 +79,7 @@ We used an epochwise exponential decay for &lambda; and s<sub>max</sub>. Good de
 - Has to be used in a slightly different way compared to default Tensorflow optimizers. 
     - Does not support Keras and Estimator API.
     - Iterator outputs must be stored manually in variables. Since two inferences over the same input data are required.
-    - Have a look into the example code to see how to use it.
+    - Have a look into the example code, to see how to use it.
 - parabola approximations and loss lines can be plotted
 
 ## Virtual environment
