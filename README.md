@@ -83,7 +83,7 @@ We used an epochwise exponential decay for &lambda; and s<sub>max</sub>. Good de
 - parabola approximations and loss lines can be plotted
 
 ## Virtual environment
-A virtual environment capable of executing the provided code can be created with the provided python_vritual_env_requirements.txt
+A virtual environment capable of executing the provided code can be created with the provided python_virtual_env_requirements.txt
 
 
 
