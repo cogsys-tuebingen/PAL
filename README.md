@@ -70,7 +70,7 @@ We used an epochwise exponential decay for &lambda; and s<sub>max</sub>. Good de
 ## Pytorch implementation:
 - Runs with PyTorch 1.0
 - Uses tensorboardX for plotting
-- parabola approximations and loss lines can be plotted
+- Parabola approximations and loss lines can be plotted
 
 
 ## Tensorflow implementation:
@@ -80,7 +80,7 @@ We used an epochwise exponential decay for &lambda; and s<sub>max</sub>. Good de
     - Does not support Keras and Estimator API.
     - Iterator outputs must be stored manually in variables. Since two inferences over the same input data are required.
     - Have a look into the example code, to see how to use it.
-- parabola approximations and loss lines can be plotted
+- Parabola approximations and loss lines can be plotted
 
 ## Virtual environment
 A virtual environment capable of executing the provided code can be created with the provided python_virtual_env_requirements.txt
