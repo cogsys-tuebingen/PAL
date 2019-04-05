@@ -25,7 +25,7 @@ For a detailed explanation, please refer to the our paper.: https://arxiv.org/ab
 
 ## The hyperparameters:
 
-For a detailed explanation, please refer to our paper: https://arxiv.org/abs/1903.11991
+For a detailed explanation, please refer to our paper: https://arxiv.org/abs/1903.11991.
 The introduced hyperparameters lead to good training errors without using data augmentation.
 Currently, we still investigate optimal hyperparameters for good test errors using state of the art data augmentation. 
 
