@@ -94,7 +94,7 @@ class PalOptimizer:
         self._create_line_gradient_variables()
         self._create_momentum_norm_and_derivative_ops()
         self._create_weight_update_ops()
-        print("successfully initialized NEPAL optimizer")
+        print("successfully initialized PAL optimizer")
         return
 
     def _create_line_gradient_variables(self):
