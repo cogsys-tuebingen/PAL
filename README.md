@@ -1,8 +1,9 @@
 # PAL - A fast DNN optimization method based on curvature information
 This repository provides Tensorflow and Pytorch reference implementations for PAL.
-Note that these optimizations are not fully optimized. This means that more well-engineered implementations could deliver even faster performance.
+Note that these implementations
+are not fully optimized. This means that more well-engineered implementations could deliver even faster performance.
 
-If you have any questions or suggestions, please do not hesitate to contact me.: maximus.mutschler(at)uni-tuebingen.de
+If you have any questions or suggestions, please do not hesitate to contact me: maximus.mutschler(at)uni-tuebingen.de
 
 ## Short introduction to PAL:
 
@@ -14,17 +15,19 @@ If you have any questions or suggestions, please do not hesitate to contact me.:
 
 PAL is based on the empirical observarion that the loss function can be approximated by a one-dimensional parabola in negative gradient direction.
 PAL performs a variable update step by jumping into the minima of an approximated parabola. To do this, the first and second derivatives in the direction of the negative gradient are calculated using two loss values and one gradient. Then a Newton update step is performed.
-PAL's performance matches or exceeds ADAM's and SGD's performance on VGG-16, ResNet-32, ResNET-34 and DenseNet-40 architectures trained on CIFAR-10.
+PAL's performance matches or exceeds ADAM's and SGD's performance on VGG-16, ResNet-32, ResNet-34 and DenseNet-40 architectures trained on CIFAR-10.
 Especially on ResNet architectures PALS shows an excellent performance.
-For a detailed explanation, please refer to the our paper.: TODO
+For a detailed explanation, please refer to the our paper.: https://arxiv.org/abs/1903.11991
 
 <img src="/Images/ResNetCifarMin30.png" title="Performance of PALS" alt="Performance of PALS" width="420" />
 
 ***Fig2: Performance of PAL***
 
-## The hyper parameters:
+## The hyperparameters:
 
-For a detailed explanation, please refer to our paper: TODO
+For a detailed explanation, please refer to our paper: https://arxiv.org/abs/1903.11991.
+The introduced hyperparameters lead to good training errors without using data augmentation.
+Currently, we still investigate optimal hyperparameters for good test errors using state of the art data augmentation. 
 
  <table style="width:100%">
     <tr>
@@ -59,7 +62,7 @@ For a detailed explanation, please refer to our paper: TODO
   </tr>
 </table> 
 
-We used an epochwise exponential dicay for &lambda; amd a<sub>max</sub>. Good decay rates are: 0.85, 0.95 .
+We used an epochwise exponential decay for &lambda; and s<sub>max</sub>. Good decay rates are: 0.85, 0.95.
 ## PAL's limitations:
 - The DNN must not contain any random components such as Dropout or ShakeDrop. This is because PALS requires two loss values of the same deterministic function (= two network inferences) to determine an update step. Otherwise the function would not be continuous and a parabolic approximation is not be possible. However, if these random component implementations could be changed so that drawn random numbers could be reused for at least two inferences, PALS would also support these operations.
 - The PALS update step takes about 1.5 times longer than for ADAM or SGD, but still converges at least as fast.
@@ -69,7 +72,7 @@ We used an epochwise exponential dicay for &lambda; amd a<sub>max</sub>. Good de
 ## Pytorch implementation:
 - Runs with PyTorch 1.0
 - Uses tensorboardX for plotting
-- parabola approximations and loss lines can be plotted
+- Parabola approximations and loss lines can be plotted
 
 
 ## Tensorflow implementation:
@@ -78,11 +81,11 @@ We used an epochwise exponential dicay for &lambda; amd a<sub>max</sub>. Good de
 - Has to be used in a slightly different way compared to default Tensorflow optimizers. 
     - Does not support Keras and Estimator API.
     - Iterator outputs must be stored manually in variables. Since two inferences over the same input data are required.
-    - Have a look into the example code to see how to use it.
-- parabola approximations and loss lines can be plotted
+    - Have a look into the example code, to see how to use it.
+- Parabola approximations and loss lines can be plotted
 
 ## Virtual environment
-A virtual environment capable of executing the provided code can be created with the provided python_vritual_env_requirements.txt
+A virtual environment capable of executing the provided code can be created with the provided python_virtual_env_requirements.txt
 
 
 
