@@ -75,7 +75,7 @@ class PalOptimizer(Optimizer):
         """ applies momentum to the gradients and saves result in gradients """
         directional_derivative = torch.tensor(0.0)
         norm = torch.tensor(0.0)
-        if momentum != 0 and calc_exact_directional_derivative is True:
+        if momentum != 0:
             with torch.no_grad():
                 for p in params:
                     if p.grad is None:
@@ -89,12 +89,16 @@ class PalOptimizer(Optimizer):
                     buf = buf.add_(p.grad.data)
                     flat_buf = buf.view(-1)
                     flat_grad = p.grad.data.view(-1)
-                    directional_derivative += torch.dot(flat_grad, flat_buf)
+                    if calc_exact_directional_derivative is True:
+                        directional_derivative += torch.dot(flat_grad, flat_buf)
                     norm += torch.dot(flat_buf, flat_buf)
                     p.grad.data = buf.clone()
             norm = torch.sqrt(norm)
             if norm == 0: norm = epsilon
-            directional_derivative = - directional_derivative / norm
+            if calc_exact_directional_derivative is True:
+                directional_derivative = - directional_derivative / norm
+            else:
+                directional_derivative = -norm
         else:
             with torch.no_grad():
                 for p in params:

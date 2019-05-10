@@ -6,10 +6,10 @@ import os
 import tensorflow as tf
 import sys
 import numpy as np
-import simple_code.cifar10_loader as cifar10_loader
-from simple_code.cifar10_loader import InferenceMode
-from simple_code.pal_optimizer import PalOptimizer
-from simple_code.resnet_model import Model
+import TensorFlow.cifar10_loader as cifar10_loader
+from TensorFlow.cifar10_loader import InferenceMode
+from TensorFlow.pal_optimizer import PalOptimizer
+from TensorFlow.resnet_model import Model
 
 
 class PalTrainingExample:
@@ -61,9 +61,9 @@ class PalTrainingExample:
 
         # !!!IMPORTANT!!!  NEPAL works outside of the graph, therefore the optimizer does not return a graph based
         # training operation. An inside graph implementation is, as far as we know, not possible with tensorflow 1.12
-        self.__nepal = PalOptimizer(self.__loss_op, measuring_step_size=measuring_step_dec,
-                                      max_step_size=maximum_step_size_dec, global_step=global_step, is_plot=False,
-                                      plot_step_interval=200, save_dir=workpath + "lines/")
+        self.__pal = PalOptimizer(self.__loss_op, measuring_step_size=measuring_step_dec,
+                                  max_step_size=maximum_step_size_dec, global_step=global_step, is_plot=False,
+                                  plot_step_interval=200, save_dir=workpath + "lines/")
 
         self.metric_variables_initializer = [x.initializer for x in tf.get_collection(tf.GraphKeys.METRIC_VARIABLES)]
 
@@ -120,7 +120,7 @@ class PalTrainingExample:
 
                 try:
                     # !!!IMPORTANT!!! no session.run is needed since Nepal does not provide a graph based training op
-                    loss, _ = self.__nepal.do_train_step(self.__acc_update_op)
+                    loss, _ = self.__pal.do_train_step(self.__acc_update_op)
                 except BaseException as e:
                     print("~" * 40)
                     print("ERROR occurred: " + str(e) + " -> training stopped")
@@ -136,7 +136,7 @@ class PalTrainingExample:
             self.__log_scalar("Average Train Accuracy / Interval", train_acc, current_step)
             print("average train loss: " + str(mean_train_loss))
             print("average train accuracy: " + str(train_acc))
-            ms = self.__sess.run(self.__nepal.measuring_step_size)
+            ms = self.__sess.run(self.__pal.measuring_step_size)
             print("measuring step size: " + str(ms))
             self.evaluate(current_step)
             sys.stdout.flush()

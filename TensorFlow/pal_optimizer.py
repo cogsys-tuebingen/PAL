@@ -33,7 +33,7 @@ class PalOptimizer:
     max_step_size = None
 
     # region initialization
-    def __init__(self, loss_tensor, measuring_step_size=0.1, momentum=0.4, loose_approximation_factor=0.6,
+    def __init__(self, loss_tensor, measuring_step_size=0.1, momentum=0.0, loose_approximation_factor=0.6,
                  max_step_size=1, gradients=None, global_step=None, calc_exact_directional_derivative=False,
                  is_plot=False, plot_step_interval=10, save_dir="/tmp/pt.lineopt/lines/"):
         """
@@ -107,7 +107,6 @@ class PalOptimizer:
             self.gradient_vars = []
             for gradient_tensor in self._gradient_tensors:
                 new_var = tf.Variable(tf.zeros(gradient_tensor.shape), trainable=False, name=gradient_tensor.name[0:-2])
-                # TODO Check name
                 self.gradient_vars.append(new_var)
 
     def _create_momentum_norm_and_derivative_ops(self):
@@ -122,21 +121,25 @@ class PalOptimizer:
             norm_grad_mom = tf.constant(0.0)
             self.norm_of_gradient_var = tf.Variable(0.0, trainable=False, name="norm_of_gradient_var")
             update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)  # important for batch normalization
-            if self.momentum != 0 and self.calc_exact_directional_derivative:
+            if self.momentum != 0:
                 for grad_tensor, gradient_var in zip(self._gradient_tensors, self.gradient_vars):
                     # Update ops important for batch normalization
                     # since _gradient_vars_assign_ops is always evaluated together with the loss op it
                     # is valid to put the dependency here
                     grad_mom = gradient_var * self.momentum + grad_tensor
                     norm_grad_mom = tf.add(norm_grad_mom, tf.reduce_sum(tf.multiply(grad_mom, grad_mom)))
-                    directional_deriv = tf.add(directional_deriv, tf.reduce_sum(tf.multiply(grad_tensor, grad_mom)))
+                    if self.calc_exact_directional_derivative:
+                        directional_deriv = tf.add(directional_deriv, tf.reduce_sum(tf.multiply(grad_tensor, grad_mom)))
                     # norm = tf.add(norm,tf.reduce_sum(tf.multiply(grad_m, grad_m)))  # element wise
                     with tf.control_dependencies(update_ops):
                         grad_var_ass_op = (gradient_var.assign(grad_mom)).op
                     self._gradient_vars_assign_ops.append(grad_var_ass_op)
                 norm_grad_mom = tf.sqrt(norm_grad_mom)
                 norm_grad_mom = tf.cond(tf.equal(norm_grad_mom, 0.0), lambda: self.epsilon, lambda: norm_grad_mom)
-                directional_deriv = - directional_deriv / norm_grad_mom
+                if self.calc_exact_directional_derivative:
+                    directional_deriv = - directional_deriv / norm_grad_mom
+                else:
+                    directional_deriv = -norm_grad_mom
             else:
                 for grad_tensor, gradient_var in zip(self._gradient_tensors, self.gradient_vars):
                     # Update ops important for batch normalization
