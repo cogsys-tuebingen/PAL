@@ -30,9 +30,9 @@ logger.addHandler(ch)
 parser = argparse.ArgumentParser(description='PyTorch CIFAR10 Training')
 parser.add_argument('--mu', default=0.1, type=float, help='sample distance, multiple of norm gradient')
 parser.add_argument('--mss', default=1.0, type=float, help='max step size')
-parser.add_argument('--momentum', default=0.4, type=float, help='lambda, momentum')
+parser.add_argument('--momentum', default=0.6, type=float, help='lambda, momentum')
 parser.add_argument('--lambda_', default=0.6, type=float, help='lambda, loose approximation')
-parser.add_argument('--decay_rate', default=0.85, type=float, help='decay rate for exponential decay')
+parser.add_argument('--decay_rate', default=0.95, type=float, help='decay rate for exponential decay')
 parser.add_argument('--decay_steps', default=450, type=float, help='decay steps for exponential decay')
 parser.add_argument('--is_plot', default=False, type=bool, help='visualize lines in negative gradient direction,'
                                                         'the coresponding parabolic approximation and update step')
@@ -44,7 +44,7 @@ parser.add_argument('--test', '-t', action='store_true', help='check the test er
 parser.add_argument('--data_dir', type=str, default='~/Data/Datasets/cifar10_data/')
 parser.add_argument('--cp_dir', type=str, default='/tmp/pt.lineopt/')
 parser.add_argument('--model', type=str, default='resnet34')
-parser.add_argument('--epochs', type=int, default=50)
+parser.add_argument('--epochs', type=int, default=1)
 parser.add_argument('--num_workers', type=int, default=2, help='num workers for data loading/augmenting')
 parser.add_argument('--batch_size', type=int, default=100)
 parser.add_argument('--batch_size_test', type=int, default=100)
@@ -58,15 +58,13 @@ update_bar_prints_train, update_bar_prints_test = 1, 1
 # Data
 logger.info('==> Preparing data..')
 transform_train = transforms.Compose([
-    # transforms.RandomCrop(32, padding=4),
-    # transforms.RandomHorizontalFlip(),
     transforms.ToTensor(),
     transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
 ])
 
 transform_test = transforms.Compose([
     transforms.ToTensor(),
-    transforms.Normalize((0.4914, 0.4822, 0.4465), (1, 1, 1)),
+    transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
 ])
 
 train_set = torchvision.datasets.CIFAR10(root=args.data_dir, train=True, download=True, transform=transform_train)
@@ -74,10 +72,10 @@ train_loader = torch.utils.data.DataLoader(train_set, batch_size=args.batch_size
                                            shuffle=True, num_workers=args.num_workers)
 steps_per_train_epoch = len(train_loader.dataset) / train_loader.batch_size
 
-if args.test:
-    test_set = torchvision.datasets.CIFAR10(root=args.data_dir, train=False, download=True, transform=transform_test)
-    test_loader = torch.utils.data.DataLoader(test_set, batch_size=args.batch_size_test,
-                                              shuffle=False, num_workers=args.num_workers)
+
+test_set = torchvision.datasets.CIFAR10(root=args.data_dir, train=False, download=True, transform=transform_test)
+test_loader = torch.utils.data.DataLoader(test_set, batch_size=args.batch_size_test,
+                                          shuffle=False, num_workers=args.num_workers)
 
 # Tensorboard, logging
 tb_dir = args.cp_dir + 'tb/'
@@ -229,6 +227,4 @@ def test(epoch_):
 if __name__ == '__main__':
     for epoch in range(start_epoch, start_epoch + args.epochs):
         train(epoch)
-        if args.test:
-            logger.info('')
-            test(epoch)
+    test(start_epoch + args.epochs+1)

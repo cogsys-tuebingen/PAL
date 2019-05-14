@@ -21,7 +21,7 @@ required = _RequiredParameter()
 
 
 class PalOptimizer(Optimizer):
-    def __init__(self, params=required, writer=None, mu=0.1, s_max=1.0, mom=0.4, lambda_=0.6,
+    def __init__(self, params=required, writer=None, mu=0.1, s_max=1.0, mom=0.6, lambda_=0.6,
                  epsilon=1e-15, calc_exact_directional_derivative=False, is_plot=False, plot_step_interval=100,
                  save_dir="/tmp/pt.lineopt/lines/"):
         """
@@ -69,7 +69,7 @@ class PalOptimizer(Optimizer):
                         lambda_=lambda_, epsilon=epsilon,
                         calc_exact_directional_derivative=calc_exact_directional_derivative, is_plot=is_plot,
                         plot_step_interval=plot_step_interval, save_dir=save_dir)
-        super(PalOptimizer, self).__init__(params, defaults)  # TODO defaults?
+        super(PalOptimizer, self).__init__(params, defaults)
 
     def set_momentum_get_norm_and_derivative(self, params, momentum, epsilon, calc_exact_directional_derivative):
         """ applies momentum to the gradients and saves result in gradients """
@@ -123,7 +123,7 @@ class PalOptimizer(Optimizer):
 
     def step(self, loss_fn):
         """
-        Performs a NEPAL optimization step,
+        Performs a PAL optimization step,
         calls the loss_fn twice
         E.g.:
         >>> def loss_fn(backward=True):
@@ -180,7 +180,7 @@ class PalOptimizer(Optimizer):
 
                 if s_upd > s_max:
                     s_upd = torch.tensor(s_max)
-                s_upd -= mu  # -mu since we already had a sample step in this direction
+                s_upd -= mu  # -mu since we already did a sample step in this direction
 
                 #### plotting
                 if is_plot and self.train_steps % plot_step_interval == 0:
@@ -220,7 +220,6 @@ class PalOptimizer(Optimizer):
                 line_losses.append(loss_fn(backward=False)[0].detach().cpu().numpy())
 
             loss_mu = loss_mu.detach().cpu().numpy()
-            # map(lambda: x.numpy(),line_losses)
             # parabola parameters:
             a = loss_d2.detach().cpu().numpy() / 2
             b = loss_d1_0.detach().cpu().numpy()

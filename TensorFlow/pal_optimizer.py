@@ -19,7 +19,7 @@ class PalOptimizer:
     !!!!!
     This optimizer can't be used like usual TensorFlow optimizers. The reason is that one train step of PAL
     needs multiple graph inferences over the same input data.
-    1. Use Variables for your input data. Load a new batch each time before you call Nepal's do_train_step method.
+    1. Use Variables for your input data. Load a new batch each time before you call PAL's do_train_step method.
     2. Exclude all random operators from  your graph. (like Dropout , ShakeDrop or Shake-Shake).
        In general, they are not supported by PAL, since, if used, the loss function changes with each inference.
        However, random operators are supported, if they are implemented in a way that they can reuse random chosen
@@ -33,7 +33,7 @@ class PalOptimizer:
     max_step_size = None
 
     # region initialization
-    def __init__(self, loss_tensor, measuring_step_size=0.1, momentum=0.0, loose_approximation_factor=0.6,
+    def __init__(self, loss_tensor, measuring_step_size=0.1, momentum=0.6, loose_approximation_factor=0.6,
                  max_step_size=1, gradients=None, global_step=None, calc_exact_directional_derivative=False,
                  is_plot=False, plot_step_interval=10, save_dir="/tmp/pt.lineopt/lines/"):
         """
@@ -53,7 +53,7 @@ class PalOptimizer:
         :param calc_exact_directional_derivative: more exact approximation but more time consuming (not recommended)
         :param is_plot: plot lines in gradient direction as well as the parabolic approximation. Latex has to be
         installed for plotting.
-        :param plot_step_interval: defines how often a line is  plotted.
+        :param plot_step_interval: defines how often a line is plotted.
         :save_dir: plot save location
         """
         if is_plot is True and not os.path.exists(save_dir):
@@ -130,7 +130,6 @@ class PalOptimizer:
                     norm_grad_mom = tf.add(norm_grad_mom, tf.reduce_sum(tf.multiply(grad_mom, grad_mom)))
                     if self.calc_exact_directional_derivative:
                         directional_deriv = tf.add(directional_deriv, tf.reduce_sum(tf.multiply(grad_tensor, grad_mom)))
-                    # norm = tf.add(norm,tf.reduce_sum(tf.multiply(grad_m, grad_m)))  # element wise
                     with tf.control_dependencies(update_ops):
                         grad_var_ass_op = (gradient_var.assign(grad_mom)).op
                     self._gradient_vars_assign_ops.append(grad_var_ass_op)
@@ -195,11 +194,11 @@ class PalOptimizer:
 
     def do_train_step(self, additional_ops):
         """
-        Does one training step. Look at the class documentation to get the requirements needed for a successfull
+        Does one training step. Look at the class documentation to get the requirements needed for a successful
         update step. Approximates a 1 dimensional parabolic function along the negative gradient direction.
         If the approximation is a negative line, a step of measuring_step_size is done in line direction.
         If the approximation is an other, unsuited parabola, no update step is done.
-        :param additional_ops: additional operators that will get inferred from the graph
+        :param additional_ops: additional operations that infer information from the graph
         :return: loss (before parameter update), additional_ops_results
         """
         max_step_size = self._sess.run(self.max_step_size) if is_tensor(self.max_step_size) else self.max_step_size
@@ -222,11 +221,12 @@ class PalOptimizer:
 
         if np.isnan(second_derivative_current_line_pos) or np.isnan(line_derivative_current_pos) \
                 or np.isinf(second_derivative_current_line_pos) or np.isinf(line_derivative_current_pos):
-            raise ValueError("first or second derivative is nan or inf -> training is stopped")
+                return loss1, additional_ops_results
+
 
         if second_derivative_current_line_pos > 0 and line_derivative_current_pos < 0:
             # approximation is positive (convex) square function.
-            #  Minimum is located in positive line direction. Should be the primary case.
+            # Minimum is located in positive line direction. Should be the primary case.
             step_size_on_line = - line_derivative_current_pos / second_derivative_current_line_pos
 
         elif second_derivative_current_line_pos <= 0 and line_derivative_current_pos < 0:
@@ -238,7 +238,7 @@ class PalOptimizer:
         else:
             #  l'>0  can't happen since the first derivative is the norm of the gradient
             #  l'==0
-            #  the current position is already an extremum
+            #  the current position is already an optimum
             step_size_on_line = 0
 
         if step_size_on_line > max_step_size:
@@ -311,7 +311,6 @@ class PalOptimizer:
         plt.plot(x, approx_values, linewidth=linewidth)
         plt.plot(x2, grad_values, linewidth=linewidth)
         plt.axvline(real_a_min, color="red", linewidth=linewidth)
-        # plt.plot([real_a_min,real_a_min],[0.53,0.9],color="red" ,linewidth=linewidth)
         y_max = max(line_losses)
         y_min = min(min(approx_values), min(line_losses))
         plt.ylim([y_min, y_max])

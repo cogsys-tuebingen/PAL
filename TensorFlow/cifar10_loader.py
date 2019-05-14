@@ -8,9 +8,9 @@ import tensorflow as tf
 
 def get_cifar10_iterator(train_data_size=40000, batch_size=100):
     """
-     creates an iterator that iterates over cifar images and the corresponding labels.
+     Creates an iterator that iterates over CIFAR-images and the corresponding labels.
      From all pixels the pixel_mean is substracted. No shuffling is done. The iterator repeats forever.
-    Returns:
+     Returns:
      iterator, inference_mode_var (must hold an element of type :class:`~code_.abstract_net_class.inferenceMode` )
      ,train_data_size, eval_data_Size, test_data_size
     """
@@ -58,7 +58,7 @@ def get_cifar10_iterator(train_data_size=40000, batch_size=100):
             train_dataset = tf.data.Dataset.from_tensor_slices((x_train, y_train))
             train_dataset = train_dataset.map(mapf, num_parallel_calls=num_aug_threads)
             train_dataset = train_dataset.repeat()
-            train_dataset = train_dataset.batch(batch_size)  # for mnist one could take the whole dataset
+            train_dataset = train_dataset.batch(batch_size)
             train_dataset = train_dataset.prefetch(8)
 
             sess=tf.get_default_session()
@@ -72,7 +72,7 @@ def get_cifar10_iterator(train_data_size=40000, batch_size=100):
 
 def _create_handle_iterator(train_dataset, eval_dataset, test_dataset, sess):
     """
-    creates iterator that is dependent on the value of inference_mode_var. Depending on its inference_mode_var's value
+    Creates iterator that is dependent on the value of inference_mode_var. Depending on its inference_mode_var's value
     data is loaded either from the train or eval or test dataset.
     :return:  iterator, inference_mode_var
     """

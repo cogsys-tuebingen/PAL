@@ -14,7 +14,7 @@ from TensorFlow.resnet_model import Model
 
 class PalTrainingExample:
     """
-    provides a simple training example that shows how to use PAL optimizer. Important parts of this code are marked
+    Provides a simple training example that shows how to use PAL optimizer. Important parts of this code are marked
     with the !!!IMPORTANT!!! flag.
     """
 
@@ -49,7 +49,7 @@ class PalTrainingExample:
 
         global_step = tf.Variable(1.0, trainable=False, name="global_step")
 
-        # !!!IMPORTANT!!!  we got good results by using an exponential decay on measuring_step_size and
+        # !!!IMPORTANT!!!  we achieved good results by using an exponential decay on measuring_step_size and
         # maximum_step_size
         measuring_step_dec = tf.train.exponential_decay(0.1,
                                                         global_step,
@@ -60,7 +60,7 @@ class PalTrainingExample:
                                                            450.0, 0.85, staircase=False)
 
         # !!!IMPORTANT!!!  NEPAL works outside of the graph, therefore the optimizer does not return a graph based
-        # training operation. An inside graph implementation is, as far as we know, not possible with tensorflow 1.12
+        # training operation. An  in-graph implementation is, as far as we know, not possible with tensorflow 1.12
         self.__pal = PalOptimizer(self.__loss_op, measuring_step_size=measuring_step_dec,
                                   max_step_size=maximum_step_size_dec, global_step=global_step, is_plot=False,
                                   plot_step_interval=200, save_dir=workpath + "lines/")
@@ -80,8 +80,8 @@ class PalTrainingExample:
 
     def train(self, epochs):
         """
-        trains the model for the given amount of epochs.
-        after each epocj the average train accuracy, train loss, eval_loss and eval_accuracy are determined.
+        Trains the model for the given amount of epochs.
+        After each epoch the average train accuracy, train loss, eval_loss and eval_accuracy are determined.
         Eventually, the test loss is calculated.
 
         :param epochs: epochs to train
@@ -119,7 +119,7 @@ class PalTrainingExample:
                     is_first_run = False
 
                 try:
-                    # !!!IMPORTANT!!! no session.run is needed since Nepal does not provide a graph based training op
+                    # !!!IMPORTANT!!! no session.run is needed since PAL does not provide a graph based training op
                     loss, _ = self.__pal.do_train_step(self.__acc_update_op)
                 except BaseException as e:
                     print("~" * 40)
@@ -222,7 +222,7 @@ class PalTrainingExample:
     @staticmethod
     def _get_resnet34_model(iterator, inference_mode_var, batch_size):
         """
-        get the ResNet34 model as defined in  https://arxiv.org/pdf/1512.03385.pdf,
+        Get the ResNet34 model as defined in  https://arxiv.org/pdf/1512.03385.pdf.
         ResNet V2 is used.        overrides :class:`abstract_net_class.get_model()`
 
         :param iterator:
@@ -236,7 +236,7 @@ class PalTrainingExample:
             y_true = tf.Variable(tf.zeros([batch_size, 1], dtype=tf.uint8), dtype=tf.uint8, trainable=False)
 
             cx, cy = iterator.get_next()
-            # !!!IMPORTANT!!!  batches must be assigned to variables, so that multiple inferences over the same batch
+            # !!!IMPORTANT!!!  Batches must be assigned to variables, so that multiple inferences over the same batch
             # are possible for each weight update step. Before each weight update step the new batch has to be loaded
             # with the batch_assign_ops
             x_assign = x.assign(cx).op
@@ -244,13 +244,13 @@ class PalTrainingExample:
 
             batch_assign_ops = (x_assign, y_true_assign)
 
-            # params from resnet paper https://arxiv.org/pdf/1512.03385.pdf
+            # Params from resnet paper https://arxiv.org/pdf/1512.03385.pdf
             res_model = Model(resnet_size=34, bottleneck=False, num_classes=10, num_filters=64, kernel_size=7,
                               conv_stride=2, first_pool_size=3, first_pool_stride=2, block_sizes=[3, 4, 6, 3],
                               block_strides=[1, 2, 2, 2], resnet_version=2)
 
-            # !!!IMPORTANT!!!  Nepal does not support random operators like Dropout. It would support them if it
-            # is possible to use the same random numbers for  at least 2 inferences.
+            # !!!IMPORTANT!!!  PAL does not support random operators like Dropout. It would support them if it
+            # is possible to use the same random numbers for at least 2 inferences.
             # tf.nn.dropout()
 
             logits = res_model(x, (tf.equal(inference_mode_var, tf.cast(InferenceMode.TRAIN, tf.uint8))))

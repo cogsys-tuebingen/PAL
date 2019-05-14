@@ -17,11 +17,11 @@ PAL is based on the empirical observarion that the loss function can be approxim
 PAL performs a variable update step by jumping into the minima of an approximated parabola. To do this, the first and second derivatives in the direction of the negative gradient are calculated using two loss values and one gradient. Then a Newton update step is performed.
 PAL's performance matches or exceeds ADAM's and SGD's performance on VGG-16, ResNet-32, ResNet-34 and DenseNet-40 architectures trained on CIFAR-10.
 Especially on ResNet architectures PALS shows an excellent performance.
-For a detailed explanation, please refer to the our paper.: https://arxiv.org/abs/1903.11991
+For a detailed explanation, please refer to our paper.: https://arxiv.org/abs/1903.11991
 
 <img src="/Images/ResNetCifarMin30.png" title="Exemplary performance of PAL" alt="Exemplary Performance of PAL" width="420" />
 
-***Fig2: Performance of PAL***
+***Fig2: Exemplary performance of PAL***
 
 ## The hyperparameters:
 
@@ -64,7 +64,7 @@ Currently, we still investigate optimal hyperparameters for good test errors usi
 
 We used an epochwise exponential decay for &lambda; and s<sub>max</sub>. Good decay rates are: 0.85, 0.95.
 ## PAL's limitations:
-- The DNN must not contain any random components such as Dropout or ShakeDrop. This is because PALS requires two loss values of the same deterministic function (= two network inferences) to determine an update step. Otherwise the function would not be continuous and a parabolic approximation is not be possible. However, if these random component implementations could be changed so that drawn random numbers could be reused for at least two inferences, PALS would also support these operations.
+- The DNN must not contain any random components such as Dropout or ShakeDrop. This is because PALS requires two loss values of the same deterministic function (= two network inferences) to determine an update step. Otherwise the function would not be continuous and a parabolic approximation is not be possible. However, if these random component implementations could be changed so that drawn random numbers can be reused for at least two inferences, PALS would also support these operations.
 - The PALS update step takes about 1.5 times longer than for ADAM or SGD, but still converges at least as fast.
 - With the state of the art of Tensorflow it was not possible for us to write a completely graph-based optimizer. Therefore it cannot be used like other Tensorflow optimizers. Have a look into the example code! This is not the case with Pytorch.
 - the Tensorflow implementation does not support Keras and Estimator API.
