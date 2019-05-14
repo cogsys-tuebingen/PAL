@@ -1,4 +1,4 @@
-# PAL - A fast DNN optimization method based on curvature information
+# PAL - A DNN optimization method based on one dimensional curvature information
 This repository provides Tensorflow and Pytorch reference implementations for PAL.
 Note that these implementations
 are not fully optimized. This means that more well-engineered implementations could deliver even faster performance.
@@ -7,8 +7,8 @@ If you have any questions or suggestions, please do not hesitate to contact me: 
 
 ## Short introduction to PAL:
 
-<img src="/Images/explanation.png " title="PALS' basic idea" alt="PALS' basic idea" width="400"/> 
-<!-- d align="right"> Fig1: PALS' basic idea </a> -->
+<img src="/Images/explanation.png " title="PAL' basic idea" alt="PAL' basic idea" width="400"/> 
+<!-- d align="right"> Fig1: PAL' basic idea </a> -->
 
 ***Fig1: PAL's basic idea*** 
 
@@ -19,7 +19,7 @@ PAL's performance matches or exceeds ADAM's and SGD's performance on VGG-16, Res
 Especially on ResNet architectures PALS shows an excellent performance.
 For a detailed explanation, please refer to the our paper.: https://arxiv.org/abs/1903.11991
 
-<img src="/Images/ResNetCifarMin30.png" title="Performance of PALS" alt="Performance of PALS" width="420" />
+<img src="/Images/ResNetCifarMin30.png" title="Exemplary performance of PAL" alt="Exemplary Performance of PAL" width="420" />
 
 ***Fig2: Performance of PAL***
 
