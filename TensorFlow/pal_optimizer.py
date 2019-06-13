@@ -119,7 +119,7 @@ class PalOptimizer:
             self._gradient_vars_assign_ops = []
             directional_deriv = tf.constant(0.0)
             norm_grad_mom = tf.constant(0.0)
-            self.norm_of_gradient_var = tf.Variable(0.0, trainable=False, name="norm_of_gradient_var")
+            self.norm_of_gradient_var = tf.Variable(0.0, trainable=False, name="norm_of_step_direction_var")
             update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)  # important for batch normalization
             if self.momentum != 0:
                 for grad_tensor, gradient_var in zip(self._gradient_tensors, self.gradient_vars):
@@ -233,7 +233,7 @@ class PalOptimizer:
             # l''<0, l'<0 approximation is negative (concave) square function.
             # maximum is located in negative line direction.
             # l''==0, l'<0  approximation is negative line
-            # Second step was more negative. so we jump there.
+            # Second step was more negative. Thus we jump there.
             step_size_on_line = measuring_step
         else:
             #  l'>0  can't happen since the first derivative is the norm of the gradient
