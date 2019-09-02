@@ -124,7 +124,7 @@ class PalOptimizer:
             if self.momentum != 0:
                 for grad_tensor, gradient_var in zip(self._gradient_tensors, self.gradient_vars):
                     # Update ops important for batch normalization
-                    # since _gradient_vars_assign_ops is always evaluated together with the loss op it
+                    # since _conjugate_direction_var_assign_ops is always evaluated together with the loss op it
                     # is valid to put the dependency here
                     grad_mom = gradient_var * self.momentum + grad_tensor
                     norm_grad_mom = tf.add(norm_grad_mom, tf.reduce_sum(tf.multiply(grad_mom, grad_mom)))
@@ -142,7 +142,7 @@ class PalOptimizer:
             else:
                 for grad_tensor, gradient_var in zip(self._gradient_tensors, self.gradient_vars):
                     # Update ops important for batch normalization
-                    # since _gradient_vars_assign_ops is always evaluated together with the loss op it
+                    # since _conjugate_direction_var_assign_ops is always evaluated together with the loss op it
                     # is valid to put the dependency here
                     norm_grad_mom = tf.add(norm_grad_mom, tf.reduce_sum(tf.multiply(grad_tensor, grad_tensor)))
                     with tf.control_dependencies(update_ops):

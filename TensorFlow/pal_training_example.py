@@ -59,7 +59,7 @@ class PalTrainingExample:
                                                            global_step,
                                                            450.0, 0.85, staircase=False)
 
-        # !!!IMPORTANT!!!  NEPAL works outside of the graph, therefore the optimizer does not return a graph based
+        # !!!IMPORTANT!!!  PAL works outside of the graph, therefore the optimizer does not return a graph based
         # training operation. An  in-graph implementation is, as far as we know, not possible with tensorflow 1.12
         self.__pal = PalOptimizer(self.__loss_op, measuring_step_size=measuring_step_dec,
                                   max_step_size=maximum_step_size_dec, global_step=global_step, is_plot=False,
