@@ -3,9 +3,11 @@ __version__ = "1.0"
 __email__ = "maximus.mutschler@uni-tuebingen.de"
 
 import os
-import tensorflow as tf
 import sys
+
 import numpy as np
+import tensorflow as tf
+
 import TensorFlow.cifar10_loader as cifar10_loader
 from TensorFlow.cifar10_loader import InferenceMode
 from TensorFlow.pal_optimizer import PalOptimizer
@@ -49,21 +51,22 @@ class PalTrainingExample:
 
         global_step = tf.Variable(1.0, trainable=False, name="global_step")
 
-        # !!!IMPORTANT!!!  we achieved good results by using an exponential decay on measuring_step_size and
+        # !!!IMPORTANT!!!  one could use decay for better performance
         # maximum_step_size
-        measuring_step_dec = tf.train.exponential_decay(0.1,
-                                                        global_step,
-                                                        450.0,
-                                                        0.85, staircase=False)
-        maximum_step_size_dec = tf.train.exponential_decay(1.0,
-                                                           global_step,
-                                                           450.0, 0.85, staircase=False)
+        # measuring_step_dec = tf.train.exponential_decay(0.1,
+        #                                                global_step,
+        #                                                450.0,
+        #                                                0.85, staircase=False)
+        # maximum_step_size_dec = tf.train.exponential_decay(1.0,
+        #                                                   global_step,
+        #                                                   450.0, 0.85, staircase=False)
 
         # !!!IMPORTANT!!!  PAL works outside of the graph, therefore the optimizer does not return a graph based
-        # training operation. An  in-graph implementation is, as far as we know, not possible with tensorflow 1.12
-        self.__pal = PalOptimizer(self.__loss_op, measuring_step_size=measuring_step_dec,
-                                  max_step_size=maximum_step_size_dec, global_step=global_step, is_plot=False,
-                                  plot_step_interval=200, save_dir=workpath + "lines/")
+        # training operation. An  in-graph implementation is, as far as we know, not possible with tensorflow 1.13
+        self.__pal = PalOptimizer(self.__loss_op, measuring_step_size=0.1,
+                                  max_step_size=10.0, conjugate_gradient_factor=0.0, update_step_adaption=1.0,
+                                  global_step=global_step, is_plot=False,
+                                  plot_step_interval=100, save_dir=workpath + "lines/")
 
         self.metric_variables_initializer = [x.initializer for x in tf.get_collection(tf.GraphKeys.METRIC_VARIABLES)]
 
@@ -136,8 +139,6 @@ class PalTrainingExample:
             self.__log_scalar("Average Train Accuracy / Interval", train_acc, current_step)
             print("average train loss: " + str(mean_train_loss))
             print("average train accuracy: " + str(train_acc))
-            ms = self.__sess.run(self.__pal.measuring_step_size)
-            print("measuring step size: " + str(ms))
             self.evaluate(current_step)
             sys.stdout.flush()
 
@@ -222,7 +223,7 @@ class PalTrainingExample:
     @staticmethod
     def _get_resnet34_model(iterator, inference_mode_var, batch_size):
         """
-        Get the ResNet34 model as defined in  https://arxiv.org/pdf/1512.03385.pdf.
+        Get the ResNet32 model as defined in  https://arxiv.org/pdf/1512.03385.pdf.
         ResNet V2 is used.        overrides :class:`abstract_net_class.get_model()`
 
         :param iterator:
@@ -245,9 +246,9 @@ class PalTrainingExample:
             batch_assign_ops = (x_assign, y_true_assign)
 
             # Params from resnet paper https://arxiv.org/pdf/1512.03385.pdf
-            res_model = Model(resnet_size=34, bottleneck=False, num_classes=10, num_filters=64, kernel_size=7,
-                              conv_stride=2, first_pool_size=3, first_pool_stride=2, block_sizes=[3, 4, 6, 3],
-                              block_strides=[1, 2, 2, 2], resnet_version=2)
+            res_model = Model(resnet_size=32, bottleneck=False, num_classes=10, num_filters=16, kernel_size=3,
+                              conv_stride=1, first_pool_size=None, first_pool_stride=1, block_sizes=[5,5,5],
+                              block_strides=[1, 2, 2], resnet_version=2)
 
             # !!!IMPORTANT!!!  PAL does not support random operators like Dropout. It would support them if it
             # is possible to use the same random numbers for at least 2 inferences.

@@ -5,6 +5,8 @@ __email__ = "maximus.mutschler@uni-tuebingen.de"
 import numpy as np
 import tensorflow as tf
 
+from TensorFlow.data_augment import cifar10_augment
+
 
 def get_cifar10_iterator(train_data_size=40000, batch_size=100):
     """
@@ -41,27 +43,36 @@ def get_cifar10_iterator(train_data_size=40000, batch_size=100):
 
             num_aug_threads = 8
 
-            def mapf(x, y): return tf.cast(x, tf.float32) - pixel_mean, y
+            pixel_mean = np.mean(x_train, axis=0)
+            pixel_std = np.std(x_train, axis=0)
+
+            def mapf_normalize(x, y): return (x - pixel_mean) / pixel_std, y
+
+            def mapf_cast(x, y): return tf.cast(x, tf.float32), y
 
             test_dataset = tf.data.Dataset.from_tensor_slices((x_test, y_test))
-            test_dataset = test_dataset.map(mapf, num_parallel_calls=num_aug_threads)
+            test_dataset = test_dataset.map(mapf_cast, num_parallel_calls=num_aug_threads)
+            test_dataset = test_dataset.map(mapf_normalize, num_parallel_calls=num_aug_threads)
             test_dataset = test_dataset.repeat()  # repeats for ever
             test_dataset = test_dataset.batch(batch_size)
             test_dataset = test_dataset.prefetch(8)
 
             eval_dataset = tf.data.Dataset.from_tensor_slices((x_eval, y_eval))
-            eval_dataset = eval_dataset.map(mapf, num_parallel_calls=num_aug_threads)
+            eval_dataset = eval_dataset.map(mapf_cast, num_parallel_calls=num_aug_threads)
+            eval_dataset = eval_dataset.map(mapf_normalize, num_parallel_calls=num_aug_threads)
             eval_dataset = eval_dataset.repeat()  # repeats for ever
             eval_dataset = eval_dataset.batch(batch_size)
             eval_dataset = eval_dataset.prefetch(8)
 
             train_dataset = tf.data.Dataset.from_tensor_slices((x_train, y_train))
-            train_dataset = train_dataset.map(mapf, num_parallel_calls=num_aug_threads)
+            train_dataset = train_dataset.map(mapf_cast, num_parallel_calls=num_aug_threads)
+            train_dataset = train_dataset.map(mapf_normalize, num_parallel_calls=num_aug_threads)
+            train_dataset = train_dataset.map(cifar10_augment, num_parallel_calls=num_aug_threads)
             train_dataset = train_dataset.repeat()
             train_dataset = train_dataset.batch(batch_size)
             train_dataset = train_dataset.prefetch(8)
 
-            sess=tf.get_default_session()
+            sess = tf.get_default_session()
             iterator, inference_mode_var = _create_handle_iterator(train_dataset, eval_dataset, test_dataset, sess)
 
             sess.run(tf.global_variables_initializer())

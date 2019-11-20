@@ -41,7 +41,7 @@ class PalOptimizer(Optimizer):
         :param writer: optional tensorboardX writer for detailed logs
         :param mu: measuring step size. Good values are between 0.01 and 0.1.
         :param s_max: maximum step size. Good values are between 0.1 and 1.
-        :param mom: momentum. Good values are either 0 or 0.6.
+        :param mom: conjugate_gradient_factor. Good values are either 0 or 0.6.
         :param lambda_: loose approximation term. Good values are between 0.4 and 0.6.
         :param calc_exact_directional_derivative: more exact approximation but more time consuming (not recommended)
         :param is_plot: plot loss line and approximation
@@ -57,7 +57,7 @@ class PalOptimizer(Optimizer):
         if s_max < 0.0:
             raise ValueError("Invalid measuring maximal step size: {}".format(s_max))
         if mom < 0.0:
-            raise ValueError("Invalid measuring momentum: {}".format(mom))
+            raise ValueError("Invalid measuring conjugate_gradient_factor: {}".format(mom))
         if lambda_ < 0.0:
             raise ValueError("Invalid loose approximation factor: {}".format(lambda_))
         if plot_step_interval < 1 or plot_step_interval % 1 is not 0:
@@ -72,7 +72,7 @@ class PalOptimizer(Optimizer):
         super(PalOptimizer, self).__init__(params, defaults)
 
     def set_momentum_get_norm_and_derivative(self, params, momentum, epsilon, calc_exact_directional_derivative):
-        """ applies momentum to the gradients and saves result in gradients """
+        """ applies conjugate_gradient_factor to the gradients and saves result in gradients """
         directional_derivative = torch.tensor(0.0)
         norm = torch.tensor(0.0)
         if momentum != 0:
