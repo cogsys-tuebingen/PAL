@@ -12,9 +12,10 @@ import torchvision
 import torchvision.transforms as transforms
 from tensorboardX import SummaryWriter
 
-import models.resnet as resnet
-import models.preact_resnet as presnet
+
 from PyTorch.pal_optimizer import PalOptimizer
+from PyTorch.resnet import ResNet34
+from PyTorch.resnet import ResNet18
 import sys
 import time
 import os
@@ -27,27 +28,21 @@ ch = logging.StreamHandler(sys.stdout)
 ch.setLevel(logging.DEBUG)
 logger.addHandler(ch)
 
-parser = argparse.ArgumentParser(description='PyTorch CIFAR10 Training')
-parser.add_argument('--mu', default=0.1, type=float, help='sample distance, multiple of norm gradient')
-parser.add_argument('--mss', default=1.0, type=float, help='max step size')
-parser.add_argument('--conjugate_gradient_factor', default=0.6, type=float, help='lambda, conjugate_gradient_factor')
-parser.add_argument('--lambda_', default=0.6, type=float, help='lambda, loose approximation')
-parser.add_argument('--decay_rate', default=0.95, type=float, help='decay rate for exponential decay')
-parser.add_argument('--decay_steps', default=450, type=float, help='decay steps for exponential decay')
-parser.add_argument('--is_plot', default=False, type=bool, help='visualize lines in negative gradient direction,'
+parser = argparse.ArgumentParser(description='PAL Pytorch CIFAR10 Training')
+parser.add_argument('--mu', default=1.0, type=float, help='sample distance, multiple of norm gradient')
+parser.add_argument('--mss', default=10.0, type=float, help='max step size')
+parser.add_argument('--conjugate_gradient_factor', default=0.4, type=float, help='conjugate_gradient_factor')
+parser.add_argument('--update_step_adaptation', default=1, type=float, help='update_step_adaptation')
+#parser.add_argument('--decay_rate', default=0.95, type=float, help='decay rate for exponential decay')
+#parser.add_argument('--decay_steps', default=450, type=float, help='decay steps for exponential decay')
+parser.add_argument('--is_plot', default=False, type=bool, help='visualize lines in negative line direction,'
                                                         'the coresponding parabolic approximation and update step')
-parser.add_argument('--save', '-s', action='store_true', help='save to checkpoint')
-parser.add_argument('--resume', '-r', action='store_true', help='resume from checkpoint')
-parser.add_argument('--log_detailed', '-d', action='store_true', help='detailed TB logs on a per-batch base',
-                    default=True)
-parser.add_argument('--test', '-t', action='store_true', help='check the test error after every epoch')
-parser.add_argument('--data_dir', type=str, default='~/Data/Datasets/cifar10_data/')
-parser.add_argument('--cp_dir', type=str, default='/tmp/pt.lineopt/')
-parser.add_argument('--model', type=str, default='resnet34')
-parser.add_argument('--epochs', type=int, default=1)
-parser.add_argument('--num_workers', type=int, default=2, help='num workers for data loading/augmenting')
+parser.add_argument('--model', type=str, default='resnet18')
+parser.add_argument('--epochs', type=int, default=25)
 parser.add_argument('--batch_size', type=int, default=100)
 parser.add_argument('--batch_size_test', type=int, default=100)
+parser.add_argument('--data_dir', type=str, default='~/Data/Datasets/cifar10_data/')
+parser.add_argument('--cp_dir', type=str, default='/tmp/pt.lineopt/')
 args = parser.parse_args()
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -69,13 +64,13 @@ transform_test = transforms.Compose([
 
 train_set = torchvision.datasets.CIFAR10(root=args.data_dir, train=True, download=True, transform=transform_train)
 train_loader = torch.utils.data.DataLoader(train_set, batch_size=args.batch_size,
-                                           shuffle=True, num_workers=args.num_workers)
+                                           shuffle=True, num_workers=2)
 steps_per_train_epoch = len(train_loader.dataset) / train_loader.batch_size
 
 
 test_set = torchvision.datasets.CIFAR10(root=args.data_dir, train=False, download=True, transform=transform_test)
 test_loader = torch.utils.data.DataLoader(test_set, batch_size=args.batch_size_test,
-                                          shuffle=False, num_workers=args.num_workers)
+                                          shuffle=False, num_workers=2)
 
 # Tensorboard, logging
 tb_dir = args.cp_dir + 'tb/'
@@ -95,56 +90,45 @@ torch.manual_seed(1)
 # Model
 logger.info('==> Building model..')
 net = {
-    'preactresnet18': presnet.PreActResNet18,
-    'resnet34': resnet.ResNet34,
+    'resnet18': ResNet18,
+    'resnet34': ResNet34,
 }.get(args.model.lower())()
 net = net.to(device)
 if device == 'cuda':
     net = torch.nn.DataParallel(net)
     cudnn.benchmark = True
 
-if args.resume:
-    # Load checkpoint.
-    logger.info('==> Resuming from checkpoint..')
-    assert os.path.isdir('checkpoint'), 'Error: no checkpoint directory found!'
-    checkpoint = torch.load('./checkpoint/ckpt.t7')
-    net.load_state_dict(checkpoint['net'])
-    best_acc = checkpoint['acc']
-    start_epoch = checkpoint['epoch']
 
 criterion = nn.CrossEntropyLoss()
-w = writer if args.log_detailed else None
-optimizer = PalOptimizer(net.parameters(), w, mu=args.mu, s_max=args.mss,
-                         lambda_=args.lambda_, mom=args.momentum, is_plot=args.is_plot, plot_step_interval=200)
+optimizer = PalOptimizer(net.parameters(), writer, measuring_step_size=args.mu, max_step_size=args.mss,
+                         update_step_adaptation=args.update_step_adaption, conjugate_gradient_factor=args.conjugate_gradient_factor, is_plot=args.is_plot, plot_step_interval=100, save_dir="lines/")
 time_start = time.time()
 
 
-def formatted_str(prefix, epoch_, batch_idx, batch_count, loss, correct, total):
-    return '{p} Epoch: {e:3}, Batch: {b:5}/{tb:5}, Loss: {l:0.4E}, Acc: {a:5.2f}%, Correct: {c:5}, Total: {t:5}'.format(
+def formatted_str(prefix, epoch_, loss, accuracy):
+    return '{p} Epoch: {e:3}, Loss: {l:0.4E}, {p}Acc.: {a:5.2f}%'.format(
         **{
             'p': prefix,
             'e': epoch_,
-            'b': batch_idx,
-            'tb': batch_count,
             'l': loss,
-            'a': 100. * correct / total,
-            'c': correct,
-            't': total
+            'a': accuracy*100,
         })
 
 
 # Training
 def train(epoch_):
-    logger.info('\nEpoch: %d' % epoch_)
-    logger.info(optimizer)
     net.train()
     train_loss = 0
     correct = 0
     total = 0
 
+
     for batch_idx, (inputs, targets) in enumerate(train_loader):
         inputs, targets = inputs.to(device), targets.to(device)
         optimizer.zero_grad()
+        #if batch_idx==1:
+            #intitial_loss = criterion(net(inputs), targets)
+            #print("Initial Loss ", intitial_loss)
 
         def loss_fn(backward=True):
             out_ = net(inputs)
@@ -153,14 +137,14 @@ def train(epoch_):
                 loss_.backward()
             return loss_, out_
 
-        # decay
+        # decay if wanted:
 
-        d_mu = args.mu * args.decay_rate ** (((epoch_ + 1) * steps_per_train_epoch + batch_idx) / args.decay_steps)
-        d_mss = args.mss * args.decay_rate ** (((epoch_ + 1) * steps_per_train_epoch + batch_idx) / args.decay_steps)
-
-        for param_group in optimizer.param_groups:
-            param_group['mu'] = d_mu
-            param_group['mss'] = d_mss
+        # d_mu = args.mu * args.decay_rate ** (((epoch_ + 1) * steps_per_train_epoch + batch_idx) / args.decay_steps)
+        # d_mss = args.mss * args.decay_rate ** (((epoch_ + 1) * steps_per_train_epoch + batch_idx) / args.decay_steps)
+        #
+        # for param_group in optimizer.param_groups:
+        #     param_group['mu'] = d_mu
+        #     param_group['mss'] = d_mss
 
         loss, outputs = optimizer.step(loss_fn)
 
@@ -168,18 +152,14 @@ def train(epoch_):
         _, predicted = outputs.max(1)
         total += targets.size(0)
         correct += predicted.eq(targets).sum().item()
-
-        if (batch_idx + 1) % (len(train_loader) // update_bar_prints_train) == 0 or (batch_idx + 1) == len(
-                train_loader):
-            logger.info(formatted_str('TRAIN:', epoch_, batch_idx, len(train_loader), loss, correct, total))
-
-    # log some info, via epoch and time[ms]
     cur_time = int((time.time() - time_start))
     logger.debug('train time: {:4.2f} min'.format(cur_time / 60))
+    logger.info(formatted_str('TRAIN:', epoch_, train_loss/(batch_idx+1), correct/total))
+    # log some info, via epoch and time[ms]
+
     for s, t in [('time', cur_time), ('epoch', epoch_)]:
-        logger.debug('writing training train-%s with %s' % (s, writer))
         writer.add_scalar('train-%s/accuracy' % s, correct / total, t)
-        writer.add_scalar('train-%s/loss_sum' % s, train_loss, t)
+        writer.add_scalar('train-%s/train_loss' % s, train_loss/(batch_idx+1), t)
 
 
 def test(epoch_):
@@ -199,9 +179,7 @@ def test(epoch_):
             total += targets.size(0)
             correct += predicted.eq(targets).sum().item()
 
-            if (batch_idx + 1) % (len(test_loader) // update_bar_prints_test) == 0 or (batch_idx + 1) == len(
-                    test_loader):
-                logger.info(formatted_str(' TEST:', epoch_, batch_idx, len(test_loader), loss, correct, total))
+    logger.info(formatted_str('TEST:', epoch_, loss, correct/total))
 
     # log some info, via epoch and time[ms]
     cur_time = int((time.time() - time_start) * 1000)
@@ -227,4 +205,4 @@ def test(epoch_):
 if __name__ == '__main__':
     for epoch in range(start_epoch, start_epoch + args.epochs):
         train(epoch)
-    test(start_epoch + args.epochs+1)
+        test(epoch)

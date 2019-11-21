@@ -2,12 +2,13 @@ __author__ = "Maximus Mutschler, Kevin Laube"
 __version__ = "1.0"
 __email__ = "maximus.mutschler@uni-tuebingen.de"
 
-import torch
-import time
-from torch.optim import Optimizer
-import numpy as np
-import matplotlib.pyplot as plt
 import os
+import time
+
+import matplotlib.pyplot as plt
+import numpy as np
+import torch
+from torch.optim import Optimizer
 
 
 class _RequiredParameter(object):
@@ -21,9 +22,10 @@ required = _RequiredParameter()
 
 
 class PalOptimizer(Optimizer):
-    def __init__(self, params=required, writer=None, mu=0.1, s_max=1.0, mom=0.6, lambda_=0.6,
-                 epsilon=1e-15, calc_exact_directional_derivative=False, is_plot=False, plot_step_interval=100,
-                 save_dir="/tmp/pt.lineopt/lines/"):
+    def __init__(self, params=required, writer=None, measuring_step_size=1, max_step_size=10.0,
+                 conjugate_gradient_factor=0.4, update_step_adaptation=1 / 0.6,
+                 epsilon=1e-10, calc_exact_directional_derivative=False, is_plot=False, plot_step_interval=100,
+                 save_dir="/tmp/lines/"):
         """
         The PAL optimizer.
         Approximates the loss in negative gradient direction with a parabolic function.
@@ -39,11 +41,11 @@ class PalOptimizer(Optimizer):
 
         :param params: net.parameters()
         :param writer: optional tensorboardX writer for detailed logs
-        :param mu: measuring step size. Good values are between 0.01 and 0.1.
-        :param s_max: maximum step size. Good values are between 0.1 and 1.
-        :param mom: conjugate_gradient_factor. Good values are either 0 or 0.6.
-        :param lambda_: loose approximation term. Good values are between 0.4 and 0.6.
-        :param calc_exact_directional_derivative: more exact approximation but more time consuming (not recommended)
+        :param measuring_step_size: Good values are between 0.1 and 1
+        :param max_step_size:  Good values are between 1 and 10.
+        :param conjugate_gradient_factor. Good values are either 0 or 0.4.
+        :param update_step_adaptation: loose approximation term. Good values are between 1.2 and 1.7
+        :param calc_exact_directional_derivative: more exact approximation but more time consuming
         :param is_plot: plot loss line and approximation
         :param plot_step_interval: training_step % plot_step_interval == 0 -> plot
         :param save_dir: line plot save location
@@ -52,40 +54,52 @@ class PalOptimizer(Optimizer):
         if is_plot == True and not os.path.exists(save_dir):
             os.makedirs(save_dir)
 
-        if mu <= 0.0:
-            raise ValueError("Invalid measuring step size: {}".format(mu))
-        if s_max < 0.0:
-            raise ValueError("Invalid measuring maximal step size: {}".format(s_max))
-        if mom < 0.0:
-            raise ValueError("Invalid measuring conjugate_gradient_factor: {}".format(mom))
-        if lambda_ < 0.0:
-            raise ValueError("Invalid loose approximation factor: {}".format(lambda_))
+        if measuring_step_size <= 0.0:
+            raise ValueError("Invalid measuring step size: {}".format(measuring_step_size))
+        if max_step_size < 0.0:
+            raise ValueError("Invalid measuring maximal step size: {}".format(max_step_size))
+        if conjugate_gradient_factor < 0.0:
+            raise ValueError("Invalid measuring conjugate_gradient_factor: {}".format(conjugate_gradient_factor))
+        if update_step_adaptation < 0.0:
+            raise ValueError("Invalid loose approximation factor: {}".format(update_step_adaptation))
         if plot_step_interval < 1 or plot_step_interval % 1 is not 0:
             raise ValueError("Invalid plot_step_interval factor: {}".format(plot_step_interval))
+
+        if measuring_step_size is not type(torch.Tensor):
+            measuring_step_size = torch.tensor(measuring_step_size)
+        if max_step_size is not type(torch.Tensor):
+            max_step_size = torch.tensor(max_step_size)
+        if conjugate_gradient_factor is not type(torch.Tensor):
+            conjugate_gradient_factor = torch.tensor(conjugate_gradient_factor)
+        if update_step_adaptation is not type(torch.Tensor):
+            update_step_adaptation = torch.tensor(update_step_adaptation)
+
         self.writer = writer
         self.train_steps = -1
         self.time_start = time.time()
-        defaults = dict(mu=torch.tensor(mu), s_max=torch.tensor(s_max), mom=mom,
-                        lambda_=lambda_, epsilon=epsilon,
+        defaults = dict(measuring_step_size=measuring_step_size,
+                        max_step_size=max_step_size, conjugate_gradient_factor=conjugate_gradient_factor,
+                        update_step_adaption=update_step_adaptation, epsilon=epsilon,
                         calc_exact_directional_derivative=calc_exact_directional_derivative, is_plot=is_plot,
                         plot_step_interval=plot_step_interval, save_dir=save_dir)
         super(PalOptimizer, self).__init__(params, defaults)
 
-    def set_momentum_get_norm_and_derivative(self, params, momentum, epsilon, calc_exact_directional_derivative):
-        """ applies conjugate_gradient_factor to the gradients and saves result in gradients """
+    def set_momentum_get_norm_and_derivative(self, params, conjugate_gradient_factor, epsilon,
+                                             calc_exact_directional_derivative):
+        """ applies conjugate_gradient_factor to the gradients and saves result in param state cg_buffer """
         directional_derivative = torch.tensor(0.0)
         norm = torch.tensor(0.0)
-        if momentum != 0:
+        if conjugate_gradient_factor != 0:
             with torch.no_grad():
                 for p in params:
                     if p.grad is None:
                         continue
                     param_state = self.state[p]
-                    if 'momentum_buffer' not in param_state:
-                        buf = param_state['momentum_buffer'] = torch.zeros_like(p.grad.data)
+                    if 'cg_buffer' not in param_state:
+                        buf = param_state['cg_buffer'] = torch.zeros_like(p.grad.data)
                     else:
-                        buf = param_state['momentum_buffer']
-                    buf = buf.mul_(momentum)
+                        buf = param_state['cg_buffer']
+                    buf = buf.mul_(conjugate_gradient_factor)
                     buf = buf.add_(p.grad.data)
                     flat_buf = buf.view(-1)
                     flat_grad = p.grad.data.view(-1)
@@ -112,14 +126,17 @@ class PalOptimizer(Optimizer):
 
         return norm, directional_derivative
 
-    @staticmethod
-    def do_param_update_step(params, step, grad_norm):
-        """ SGD-like update step of length 'mu' in negative gradient direction """
+    def do_param_update_step(self, params, step, direction_norm):
+        """ SGD-like update step of length 'measuring_step_size' in negative gradient direction """
         if step != 0:
             for p in params:
                 if p.grad is None:
                     continue
-                p.data.add_(step * -p.grad.data / grad_norm)
+                param_state = self.state[p]
+                if 'cg_buffer'  in param_state:
+                    line_direction = param_state['cg_buffer']
+                    p.data.add_(step * -line_direction / direction_norm)
+                else:  p.data.add_(step * -p.grad.data / direction_norm)
 
     def step(self, loss_fn):
         """
@@ -143,10 +160,10 @@ class PalOptimizer(Optimizer):
         with torch.enable_grad():  #
             for group in self.param_groups:
                 params = group['params']
-                mu = group['mu']
-                s_max = group['s_max']
-                lambda_ = group['lambda_']
-                mom = group['mom']
+                measuring_step = group['measuring_step_size']
+                max_step_size = group['max_step_size']
+                update_step_adaption = group['update_step_adaptation']
+                conjugate_gradient_factor = group['conjugate_gradient_factor']
                 epsilon = group['epsilon']
                 is_plot = group['is_plot']
                 plot_step_interval = group['plot_step_interval']
@@ -155,37 +172,39 @@ class PalOptimizer(Optimizer):
 
                 # get gradients for each param
                 loss_0, *returns = loss_fn(backward=True)
-                grad_norm, loss_d1_0 = self.set_momentum_get_norm_and_derivative(params, mom, epsilon,
-                                                                                 calc_exact_directional_derivative)
+                direction_norm, directional_derivative = self.set_momentum_get_norm_and_derivative(params,
+                                                                                                   conjugate_gradient_factor,
+                                                                                                   epsilon,
+                                                                                                   calc_exact_directional_derivative)
 
-                # sample step of length mu
-                PalOptimizer.do_param_update_step(params, mu, grad_norm)
+                # sample step of length measuring_step_size
+                self.do_param_update_step(params, measuring_step, direction_norm)
                 loss_mu, *_ = loss_fn(backward=False)
 
-                # derivatives
-                loss_d1_mu_half = (loss_mu - loss_0) / mu
-                loss_d2 = lambda_ * (loss_d1_mu_half - loss_d1_0) / (mu / 2)
+                # parabolic parameters
+                b = directional_derivative
+                a = (loss_mu - loss_0 - directional_derivative * measuring_step) / (measuring_step ** 2)
+                # c = loss_0
 
-                if torch.isnan(loss_d2) or torch.isnan(loss_d1_0) or torch.isnan(
-                        loss_d1_mu_half):  # or torch.isinf(loss_d2):  # removed for 0.4 compatibility
+                if torch.isnan(a) or torch.isnan(b) or torch.isinf(a) or torch.isinf(b):
                     return [loss_0] + returns
 
                 # get jump distance
-                if loss_d2 > 0 and loss_d1_0 < 0:
-                    s_upd = -(loss_d1_0 / loss_d2)
-                elif loss_d2 <= 0 and loss_d1_0 < 0:
-                    s_upd = torch.tensor(mu)
+                if a > 0 and b < 0:
+                    s_upd = -b / (2 * a) * update_step_adaption
+                elif a <= 0 and b < 0:
+                    s_upd = measuring_step.clone()  # clone() since otherwise it's a reference to the measuring_step object
                 else:
                     s_upd = torch.tensor(0.0)
 
-                if s_upd > s_max:
-                    s_upd = torch.tensor(s_max)
-                s_upd -= mu  # -mu since we already did a sample step in this direction
+                if s_upd > max_step_size:
+                    s_upd = max_step_size.clone()
+                s_upd -= measuring_step
 
                 #### plotting
                 if is_plot and self.train_steps % plot_step_interval == 0:
-                    self.plot_loss_line_and_approximation(mu / 10, s_upd, mu, grad_norm,
-                                                          loss_fn, loss_d2, loss_d1_0, loss_0, loss_mu, params,
+                    self.plot_loss_line_and_approximation(measuring_step / 10, s_upd, measuring_step, direction_norm,
+                                                          loss_fn, a, b, loss_0, loss_mu, params,
                                                           save_dir)
 
                 # log some info, via batch and time[ms]
@@ -194,93 +213,176 @@ class PalOptimizer(Optimizer):
                     for s, t in [('time', cur_time), ('batch', self.train_steps)]:
                         self.writer.add_scalar('train-%s/l_0' % s, loss_0.item(), t)
                         self.writer.add_scalar('train-%s/l_mu' % s, loss_mu.item(), t)
-                        self.writer.add_scalar('train-%s/l_d1_0' % s, loss_d1_0.item(), t)
-                        self.writer.add_scalar('train-%s/l_d1_mu_half' % s, loss_d1_mu_half.item(), t)
-                        self.writer.add_scalar('train-%s/l_d2' % s, loss_d2.item(), t)
-                        self.writer.add_scalar('train-%s/mu' % s, mu, t)
-                        self.writer.add_scalar('train-%s/mss' % s, s_max, t)
+                        self.writer.add_scalar('train-%s/b' % s, b.item(), t)
+                        self.writer.add_scalar('train-%s/a' % s, a.item(), t)
+                        self.writer.add_scalar('train-%s/measuring_step_size' % s, measuring_step, t)
+                        self.writer.add_scalar('train-%s/mss' % s, max_step_size, t)
                         self.writer.add_scalar('train-%s/s_upd' % s, s_upd, t)
-                        self.writer.add_scalar('train-%s/grad_norm' % s, grad_norm.item(), t)
+                        self.writer.add_scalar('train-%s/grad_norm' % s, direction_norm.item(), t)
 
-                PalOptimizer.do_param_update_step(params, s_upd, grad_norm)
-                # return first loss(0) and outputs(0), the ones at (mu) are biased towards the targets
+                self.do_param_update_step(params, s_upd, direction_norm)
+                # return first loss(0) and outputs(0), the ones at (measuring_step_size) are biased towards the targets
+                # print(loss_0.item())
+
                 return [loss_0] + returns
 
-    def plot_loss_line_and_approximation(self, resolution, a_min, mu, grad_norm, loss_fn, loss_d2, loss_d1_0, loss_0,
-                                         loss_mu, params, save_dir):
-        with torch.no_grad():
-            real_a_min = a_min + mu
-            line_losses = []
-            interval = list(np.arange(-resolution, real_a_min + 2 * resolution, resolution))
-            PalOptimizer.do_param_update_step(params, -mu - resolution, grad_norm)
+    def plot_loss_line_and_approximation(self, resolution, a_min, mu, direction_norm, loss_fn, a, b, loss_0, loss_mu,
+                                         params,
+                                         save_dir):
+        resolution = resolution.clone()
+        a_min = a_min.clone()
+        mu = mu.clone()
+        direction_norm = direction_norm.clone()
+        a = a.clone()
+        b = b.clone()
+        loss_0 = loss_0.clone()
+        loss_mu = loss_mu.clone()
+
+        # parabola parameters:
+        a = a.detach().cpu().numpy()
+        b = b.detach().cpu().numpy()
+        c = loss_0.detach().cpu().numpy()
+
+
+        real_a_min = (a_min + mu).detach().cpu().numpy()
+        line_losses = []
+        resolution = resolution*2
+        resolution_v = (resolution).detach().cpu().numpy()
+        max_step = 2
+        min_step = 1
+        interval = list(np.arange(-2 * resolution_v - min_step, max_step + 2 * resolution_v , resolution_v))
+        self.do_param_update_step(params, -mu - 2 * resolution - min_step, direction_norm)
+        line_losses.append(loss_fn(backward=False)[0].detach().cpu().numpy())
+
+        for i in range(len(interval) - 1):
+            self.do_param_update_step(params, resolution, direction_norm)
             line_losses.append(loss_fn(backward=False)[0].detach().cpu().numpy())
 
-            for i in range(len(interval) - 1):
-                PalOptimizer.do_param_update_step(params, resolution, grad_norm)
-                line_losses.append(loss_fn(backward=False)[0].detach().cpu().numpy())
+        def parabolic_function(x, a, b, c):
+            """
+            :return:  value of f(x)= a(x-t)^2+b(x-t)+c
+            """
+            return a * x ** 2 + b * x + c
+        x = interval
+        x2 = list(np.arange(-resolution_v, 1.1 * resolution_v, resolution_v))
 
-            loss_mu = loss_mu.detach().cpu().numpy()
-            # parabola parameters:
-            a = loss_d2.detach().cpu().numpy() / 2
-            b = loss_d1_0.detach().cpu().numpy()
-            c = loss_0.detach().cpu().numpy()
+        plt.rc('text', usetex=True)
+        plt.rc('font', serif="Times")
+        scale_factor = 1
+        tick_size = 23 * scale_factor
+        label_size = 23 * scale_factor
+        heading_size = 26 * scale_factor
+        fig_sizes = np.array([10, 8]) * scale_factor
 
-            def parabolic_function(x, a, b, c):
-                """
-                :return:  value of f(x)= a(x-t)^2+b(x-t)+c
-                """
-                return a * x ** 2 + b * x + c
+        fig = plt.figure(0)
+        fig.set_size_inches(fig_sizes)
+        plt.plot(x, line_losses, linewidth=3.0)
+        approx_values = [parabolic_function(x_i, a, b, c) for x_i in x]
+        plt.plot(x, approx_values, linewidth=3.0)
+        grad_values = [b * x2_i + c for x2_i in x2]
+        plt.plot(x2, grad_values, linewidth=3.0)
+        plt.axvline(real_a_min, color="red", linewidth=3.0)
+        y_max = max(line_losses)
+        y_min = min(min(approx_values), min(line_losses))
+        plt.ylim([y_min, y_max])
+        plt.legend(["loss", "approximation", "derivative", r"$a_{min}$"], fontsize=label_size)
+        plt.xlabel("step on line", fontsize=label_size)
+        plt.ylabel("loss in line direction", fontsize=label_size)
+        plt.plot(0, c, 'x')
 
-            x = interval
-            x2 = list(np.arange(-resolution, 1.1 * resolution, resolution))
+        mu_v = mu.detach().cpu().numpy()
+        loss_mu_v = loss_mu.detach().cpu().numpy()
+        plt.plot(mu_v, loss_mu_v, 'x')
 
-            approx_values = [parabolic_function(x_i, a, b, c) for x_i in x]
-            grad_values = [b * x2_i + c for x2_i in x2]
-            global_step = self.train_steps
+        global_step = self.train_steps
+        plt.title("Loss line of step {0:d}".format(global_step), fontsize=heading_size)
 
-            plt.rc('text', usetex=True)
-            plt.rc('font', serif="Times")
-            scale_factor = 1
-            tick_size = 21 * scale_factor
-            labelsize = 23 * scale_factor
-            headingsize = 26 * scale_factor
-            fig_sizes = np.array([10, 8]) * scale_factor
-            linewidth = 4.0
+        plt.gca().tick_params(
+            axis='both',
+            which='both',
+            labelsize=tick_size)
 
-            fig = plt.figure(0)
-            fig.set_size_inches(fig_sizes)
-            plt.plot(x, line_losses, linewidth=linewidth)
-            plt.plot(x, approx_values, linewidth=linewidth)
-            plt.plot(x2, grad_values, linewidth=linewidth)
-            plt.axvline(real_a_min, color="red", linewidth=linewidth)
-            # plt.plot([real_a_min,real_a_min],[0.53,0.9],color="red" ,linewidth=linewidth)
-            y_max = max(line_losses)
-            y_min = min(min(approx_values), min(line_losses))
-            plt.ylim([y_min, y_max])
-            plt.scatter(0, c, color="black", marker='x', s=100, zorder=10, linewidth=linewidth)
-            plt.scatter(mu, loss_mu, color="black", marker='x', s=100, zorder=10, linewidth=linewidth)
-
-            plt.legend(["loss", "approximation", "derivative", "update step", "loss measurements"],
-                       fontsize=labelsize,
-                       loc="upper center")
-            plt.xlabel(r"step on line", fontsize=labelsize)
-            plt.ylabel("loss in line direction", fontsize=labelsize)
-
-            plt.title("update step {0:d}".format(global_step), fontsize=headingsize)
-
-            plt.gca().tick_params(
-                axis='both',
-                which='both',
-                labelsize=tick_size
-            )
-            plt.gca().ticklabel_format(style='sci')
-            plt.gca().yaxis.get_offset_text().set_size(tick_size)
-
-            plt.savefig("{0}line{1:d}.png".format(save_dir, global_step))
-            print("plottet line {0}line{1:d}.png".format(save_dir, global_step))
-            # plt.show(block=True)
-            plt.close(0)
-
-            PalOptimizer.do_param_update_step(params, -(len(interval) - 1) * resolution + mu, grad_norm)
-
+        plt.savefig("{0}line{1:d}.png".format(save_dir, global_step))
+        print("plotted line {0}line{1:d}.png".format(save_dir, global_step))
+        # plt.show(block=True)
+        plt.close(0)
+        positive_steps = sum(i > 0 for i in interval)
+        self.do_param_update_step(params, - positive_steps * resolution + mu, direction_norm)
     #####
+
+    # def plot_loss_line_and_approximation(self, resolution, a_min, mu, grad_norm, loss_fn, loss_d2, loss_d1_0, loss_0,
+    #                                      loss_mu, params, save_dir):
+    #     with torch.no_grad():
+    #         real_a_min = a_min + mu
+    #         line_losses = []
+    #         interval = list(np.arange(-resolution, real_a_min + 2 * resolution, resolution))
+    #         PalOptimizer.do_param_update_step(params, -mu - resolution, grad_norm)
+    #         line_losses.append(loss_fn(backward=False)[0].detach().cpu().numpy())
+    #
+    #         for i in range(len(interval) - 1):
+    #             PalOptimizer.do_param_update_step(params, resolution, grad_norm)
+    #             line_losses.append(loss_fn(backward=False)[0].detach().cpu().numpy())
+    #
+    #         loss_mu = loss_mu.detach().cpu().numpy()
+    #         # parabola parameters:
+    #         a = loss_d2.detach().cpu().numpy() / 2
+    #         b = loss_d1_0.detach().cpu().numpy()
+    #         c = loss_0.detach().cpu().numpy()
+    #
+    #         def parabolic_function(x, a, b, c):
+    #             """
+    #             :return:  value of f(x)= a(x-t)^2+b(x-t)+c
+    #             """
+    #             return a * x ** 2 + b * x + c
+    #
+    #         x = interval
+    #         x2 = list(np.arange(-resolution, 1.1 * resolution, resolution))
+    #
+    #         approx_values = [parabolic_function(x_i, a, b, c) for x_i in x]
+    #         grad_values = [b * x2_i + c for x2_i in x2]
+    #         global_step = self.train_steps
+    #
+    #         plt.rc('text', usetex=True)
+    #         plt.rc('font', serif="Times")
+    #         scale_factor = 1
+    #         tick_size = 21 * scale_factor
+    #         labelsize = 23 * scale_factor
+    #         headingsize = 26 * scale_factor
+    #         fig_sizes = np.array([10, 8]) * scale_factor
+    #         linewidth = 4.0
+    #
+    #         fig = plt.figure(0)
+    #         fig.set_size_inches(fig_sizes)
+    #         plt.plot(x, line_losses, linewidth=linewidth)
+    #         plt.plot(x, approx_values, linewidth=linewidth)
+    #         plt.plot(x2, grad_values, linewidth=linewidth)
+    #         plt.axvline(real_a_min, color="red", linewidth=linewidth)
+    #         # plt.plot([real_a_min,real_a_min],[0.53,0.9],color="red" ,linewidth=linewidth)
+    #         y_max = max(line_losses)
+    #         y_min = min(min(approx_values), min(line_losses))
+    #         plt.ylim([y_min, y_max])
+    #         plt.scatter(0, c, color="black", marker='x', s=100, zorder=10, linewidth=linewidth)
+    #         plt.scatter(mu, loss_mu, color="black", marker='x', s=100, zorder=10, linewidth=linewidth)
+    #
+    #         plt.legend(["loss", "approximation", "derivative", "update step", "loss measurements"],
+    #                    fontsize=labelsize,
+    #                    loc="upper center")
+    #         plt.xlabel(r"step on line", fontsize=labelsize)
+    #         plt.ylabel("loss in line direction", fontsize=labelsize)
+    #
+    #         plt.title("update step {0:d}".format(global_step), fontsize=headingsize)
+    #
+    #         plt.gca().tick_params(
+    #             axis='both',
+    #             which='both',
+    #             labelsize=tick_size
+    #         )
+    #         plt.gca().ticklabel_format(style='sci')
+    #         plt.gca().yaxis.get_offset_text().set_size(tick_size)
+    #
+    #         plt.savefig("{0}line{1:d}.png".format(save_dir, global_step))
+    #         print("plottet line {0}line{1:d}.png".format(save_dir, global_step))
+    #         # plt.show(block=True)
+    #         plt.close(0)
+    #
+    #         PalOptimizer.do_param_update_step(params, -(len(interval) - 1) * resolution + mu, grad_norm)

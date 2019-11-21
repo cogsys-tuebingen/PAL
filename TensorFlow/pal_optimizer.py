@@ -20,38 +20,36 @@ class PalOptimizer:
     This optimizer can't be used like usual TensorFlow optimizers. The reason is that one train step of PAL
     needs multiple graph inferences over the same input data.
     1. Use Variables for your input data. Load a new batch each time before you call PAL's do_train_step method.
-    2. Exclude all random operators from  your graph. (like Dropout , ShakeDrop or Shake-Shake).
-       In general, they are not supported by PAL, since, if used, the loss function changes with each inference.
-       However, random operators are supported, if they are implemented in a way that they can reuse random chosen
-       numbers for multiple inferences.
+    2. Replace all random operators from your graph. (like Dropout , ShakeDrop or Shake-Shake) with implementations
+       that can reuse random values multiple times. For Dropout we provide such an impplementation.
+       in dropout_with_random_value_reuse.py.
+       If there is no alternative available exclude the random operators from your graph.
     """
 
     # tunable parameters
-    update_step_adaption = None
+    update_step_adaptation = None
     conjugate_gradient_factor = None
     measuring_step_size = None
     max_step_size = None
 
     # region initialization
-    def __init__(self, loss_tensor, measuring_step_size=0.1, conjugate_gradient_factor=0.0, update_step_adaption=1,
+    def __init__(self, loss_tensor, measuring_step_size=1, conjugate_gradient_factor=0, update_step_adaptation=1 / 0.6,
                  # 1/0.6,
-                 max_step_size=1, gradients=None, global_step=None, calc_exact_directional_derivative=True,
+                 max_step_size=10, gradients=None, global_step=None, calc_exact_directional_derivative=True,
                  is_plot=False, plot_step_interval=10, save_dir="/tmp/lines/"):
         """
         :param loss_tensor: only scalar loss tensors are supported in the moment
         :param measuring_step_size: python scalar or tf.tensor are accepted. Should have the same decay as max_step_size
-        Good values are between 0.01 and 0.1
+        Good values are between 0.1 and 1
         :param conjugate_gradient_factor: python scalar or tf.tensor are accepted
         Good values are either 0 or 0.4
-        :param update_step_adaption: intentionally increase or decrease the update step by a factor.
-        Values between 0 and inf (inf exclusive) are accepted. Values <1 lead to approximations with less curvature.
-        python scalar or tf.tensor are accepted. Good values are between 0.4 and 0.6
+        :param update_step_adaptation: intentionally increase or decrease the update step by a factor. Good values are between 1.2 and 1.7
         :param max_step_size: python scalar or tf.tensor are accepted. Same decay as for measuring_step_size should be
         applied
-        Good values are between 0.1 and 1.
+        Good values are between 1 and 10.
         :param gradients: (grad,corresponding variable) tuple list
         :param global_step: step counter
-        :param calc_exact_directional_derivative: more exact approximation but more time consuming (not necessary)
+        :param calc_exact_directional_derivative: more exact approximation but more time consuming
         :param is_plot: plot lines in gradient direction as well as the parabolic approximation. Latex has to be
         installed for plotting.
         :param plot_step_interval: defines how often a line is plotted.
@@ -62,7 +60,7 @@ class PalOptimizer:
 
         self._sess = tf.get_default_session()
 
-        self.update_step_adaption = float(update_step_adaption)
+        self.update_step_adaptation = float(update_step_adaptation)
         self.conjugate_gradient_factor = float(conjugate_gradient_factor)
         self.measuring_step_size = float(measuring_step_size)
         self.max_step_size = float(max_step_size)
@@ -206,8 +204,8 @@ class PalOptimizer:
         :return: loss (before parameter update), additional_ops_results
         """
         max_step_size = self._sess.run(self.max_step_size) if is_tensor(self.max_step_size) else self.max_step_size
-        update_step_adaption = self._sess.run(self.update_step_adaption) if \
-            is_tensor(self.update_step_adaption) else self.update_step_adaption
+        update_step_adaption = self._sess.run(self.update_step_adaptation) if \
+            is_tensor(self.update_step_adaptation) else self.update_step_adaptation
         measuring_step = self._sess.run(self.measuring_step_size) if \
             is_tensor(self.measuring_step_size) else self.measuring_step_size
 
@@ -265,7 +263,7 @@ class PalOptimizer:
     def __str__(self):
         dict_ = {"measuring_step_size": self.measuring_step_size,
                  "conjugate_gradient_factor": self.conjugate_gradient_factor,
-                 "update_step_adaption": self.update_step_adaption, "max_step_size": self.max_step_size}
+                 "update_step_adaptation": self.update_step_adaptation, "max_step_size": self.max_step_size}
         param_string = ', '.join("{!s}={!r}".format(k, v) for (k, v) in dict_.items())
         return self.__class__.__name__ + "_" + param_string
 
@@ -331,7 +329,7 @@ class PalOptimizer:
             labelsize=tick_size)
 
         plt.savefig("{0}line{1:d}.png".format(save_dir, global_step))
-        print("plottet line {0}line{1:d}.png".format(save_dir, global_step))
+        print("plotted line {0}line{1:d}.png".format(save_dir, global_step))
         # plt.show(block=True)
         plt.close(0)
         positive_steps = sum(i > 0 for i in interval)

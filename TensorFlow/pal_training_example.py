@@ -64,7 +64,7 @@ class PalTrainingExample:
         # !!!IMPORTANT!!!  PAL works outside of the graph, therefore the optimizer does not return a graph based
         # training operation. An  in-graph implementation is, as far as we know, not possible with tensorflow 1.13
         self.__pal = PalOptimizer(self.__loss_op, measuring_step_size=0.1,
-                                  max_step_size=10.0, conjugate_gradient_factor=0.0, update_step_adaption=1.0,
+                                  max_step_size=10.0, conjugate_gradient_factor=0.0, update_step_adaptation=1.0,
                                   global_step=global_step, is_plot=False,
                                   plot_step_interval=100, save_dir=workpath + "lines/")
 
