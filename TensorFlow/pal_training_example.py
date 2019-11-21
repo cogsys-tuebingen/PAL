@@ -35,7 +35,7 @@ class PalTrainingExample:
         np.random.seed(1)
         tf.set_random_seed(1)
 
-        workpath=os.getcwd()
+        workpath=os.getcwd()+"/"
         #workpath = os.path.dirname(os.path.dirname(sys.argv[0])) + '/'
         self.check_and_create_path(workpath)
         self.__writer = tf.summary.FileWriter(workpath + "log/", filename_suffix=".event", flush_secs=10)
