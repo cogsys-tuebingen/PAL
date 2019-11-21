@@ -79,7 +79,7 @@ class PalOptimizer(Optimizer):
         self.time_start = time.time()
         defaults = dict(measuring_step_size=measuring_step_size,
                         max_step_size=max_step_size, conjugate_gradient_factor=conjugate_gradient_factor,
-                        update_step_adaption=update_step_adaptation, epsilon=epsilon,
+                        update_step_adaptation=update_step_adaptation, epsilon=epsilon,
                         calc_exact_directional_derivative=calc_exact_directional_derivative, is_plot=is_plot,
                         plot_step_interval=plot_step_interval, save_dir=save_dir)
         super(PalOptimizer, self).__init__(params, defaults)
@@ -133,10 +133,11 @@ class PalOptimizer(Optimizer):
                 if p.grad is None:
                     continue
                 param_state = self.state[p]
-                if 'cg_buffer'  in param_state:
+                if 'cg_buffer' in param_state:
                     line_direction = param_state['cg_buffer']
                     p.data.add_(step * -line_direction / direction_norm)
-                else:  p.data.add_(step * -p.grad.data / direction_norm)
+                else:
+                    p.data.add_(step * -p.grad.data / direction_norm)
 
     def step(self, loss_fn):
         """
@@ -162,7 +163,7 @@ class PalOptimizer(Optimizer):
                 params = group['params']
                 measuring_step = group['measuring_step_size']
                 max_step_size = group['max_step_size']
-                update_step_adaption = group['update_step_adaptation']
+                update_step_adaptation = group['update_step_adaptation']
                 conjugate_gradient_factor = group['conjugate_gradient_factor']
                 epsilon = group['epsilon']
                 is_plot = group['is_plot']
@@ -191,7 +192,7 @@ class PalOptimizer(Optimizer):
 
                 # get jump distance
                 if a > 0 and b < 0:
-                    s_upd = -b / (2 * a) * update_step_adaption
+                    s_upd = -b / (2 * a) * update_step_adaptation
                 elif a <= 0 and b < 0:
                     s_upd = measuring_step.clone()  # clone() since otherwise it's a reference to the measuring_step object
                 else:
@@ -243,14 +244,13 @@ class PalOptimizer(Optimizer):
         b = b.detach().cpu().numpy()
         c = loss_0.detach().cpu().numpy()
 
-
         real_a_min = (a_min + mu).detach().cpu().numpy()
         line_losses = []
-        resolution = resolution*2
+        resolution = resolution * 2
         resolution_v = (resolution).detach().cpu().numpy()
         max_step = 2
         min_step = 1
-        interval = list(np.arange(-2 * resolution_v - min_step, max_step + 2 * resolution_v , resolution_v))
+        interval = list(np.arange(-2 * resolution_v - min_step, max_step + 2 * resolution_v, resolution_v))
         self.do_param_update_step(params, -mu - 2 * resolution - min_step, direction_norm)
         line_losses.append(loss_fn(backward=False)[0].detach().cpu().numpy())
 
@@ -263,6 +263,7 @@ class PalOptimizer(Optimizer):
             :return:  value of f(x)= a(x-t)^2+b(x-t)+c
             """
             return a * x ** 2 + b * x + c
+
         x = interval
         x2 = list(np.arange(-resolution_v, 1.1 * resolution_v, resolution_v))
 

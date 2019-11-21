@@ -5,22 +5,22 @@ __email__ = "maximus.mutschler@uni-tuebingen.de"
 """
 Implementation adapted from https://github.com/kuangliu/pytorch-cifar
 """
+import argparse
+import logging
+import os
+import sys
+import time
+
 import torch
-import torch.nn as nn
 import torch.backends.cudnn as cudnn
+import torch.nn as nn
 import torchvision
 import torchvision.transforms as transforms
 from tensorboardX import SummaryWriter
 
-
 from PyTorch.pal_optimizer import PalOptimizer
-from PyTorch.resnet import ResNet34
 from PyTorch.resnet import ResNet18
-import sys
-import time
-import os
-import argparse
-import logging
+from PyTorch.resnet import ResNet34
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -33,12 +33,12 @@ parser.add_argument('--mu', default=1.0, type=float, help='sample distance, mult
 parser.add_argument('--mss', default=10.0, type=float, help='max step size')
 parser.add_argument('--conjugate_gradient_factor', default=0.4, type=float, help='conjugate_gradient_factor')
 parser.add_argument('--update_step_adaptation', default=1, type=float, help='update_step_adaptation')
-#parser.add_argument('--decay_rate', default=0.95, type=float, help='decay rate for exponential decay')
-#parser.add_argument('--decay_steps', default=450, type=float, help='decay steps for exponential decay')
+# parser.add_argument('--decay_rate', default=0.95, type=float, help='decay rate for exponential decay')
+# parser.add_argument('--decay_steps', default=450, type=float, help='decay steps for exponential decay')
 parser.add_argument('--is_plot', default=False, type=bool, help='visualize lines in negative line direction,'
-                                                        'the coresponding parabolic approximation and update step')
+                                                                'the coresponding parabolic approximation and update step')
 parser.add_argument('--model', type=str, default='resnet18')
-parser.add_argument('--epochs', type=int, default=25)
+parser.add_argument('--epochs', type=int, default=5)
 parser.add_argument('--batch_size', type=int, default=100)
 parser.add_argument('--batch_size_test', type=int, default=100)
 parser.add_argument('--data_dir', type=str, default='~/Data/Datasets/cifar10_data/')
@@ -66,7 +66,6 @@ train_set = torchvision.datasets.CIFAR10(root=args.data_dir, train=True, downloa
 train_loader = torch.utils.data.DataLoader(train_set, batch_size=args.batch_size,
                                            shuffle=True, num_workers=2)
 steps_per_train_epoch = len(train_loader.dataset) / train_loader.batch_size
-
 
 test_set = torchvision.datasets.CIFAR10(root=args.data_dir, train=False, download=True, transform=transform_test)
 test_loader = torch.utils.data.DataLoader(test_set, batch_size=args.batch_size_test,
@@ -98,10 +97,11 @@ if device == 'cuda':
     net = torch.nn.DataParallel(net)
     cudnn.benchmark = True
 
-
 criterion = nn.CrossEntropyLoss()
 optimizer = PalOptimizer(net.parameters(), writer, measuring_step_size=args.mu, max_step_size=args.mss,
-                         update_step_adaptation=args.update_step_adaption, conjugate_gradient_factor=args.conjugate_gradient_factor, is_plot=args.is_plot, plot_step_interval=100, save_dir="lines/")
+                         update_step_adaptation=args.update_step_adaptation,
+                         conjugate_gradient_factor=args.conjugate_gradient_factor, is_plot=args.is_plot,
+                         plot_step_interval=100, save_dir="lines/")
 time_start = time.time()
 
 
@@ -111,7 +111,7 @@ def formatted_str(prefix, epoch_, loss, accuracy):
             'p': prefix,
             'e': epoch_,
             'l': loss,
-            'a': accuracy*100,
+            'a': accuracy * 100,
         })
 
 
@@ -122,13 +122,13 @@ def train(epoch_):
     correct = 0
     total = 0
 
-
     for batch_idx, (inputs, targets) in enumerate(train_loader):
         inputs, targets = inputs.to(device), targets.to(device)
         optimizer.zero_grad()
-        #if batch_idx==1:
-            #intitial_loss = criterion(net(inputs), targets)
-            #print("Initial Loss ", intitial_loss)
+
+        # if batch_idx==1:
+        # intitial_loss = criterion(net(inputs), targets)
+        # print("Initial Loss ", intitial_loss)
 
         def loss_fn(backward=True):
             out_ = net(inputs)
@@ -154,12 +154,12 @@ def train(epoch_):
         correct += predicted.eq(targets).sum().item()
     cur_time = int((time.time() - time_start))
     logger.debug('train time: {:4.2f} min'.format(cur_time / 60))
-    logger.info(formatted_str('TRAIN:', epoch_, train_loss/(batch_idx+1), correct/total))
+    logger.info(formatted_str('TRAIN:', epoch_, train_loss / (batch_idx + 1), correct / total))
     # log some info, via epoch and time[ms]
 
     for s, t in [('time', cur_time), ('epoch', epoch_)]:
         writer.add_scalar('train-%s/accuracy' % s, correct / total, t)
-        writer.add_scalar('train-%s/train_loss' % s, train_loss/(batch_idx+1), t)
+        writer.add_scalar('train-%s/train_loss' % s, train_loss / (batch_idx + 1), t)
 
 
 def test(epoch_):
@@ -179,7 +179,7 @@ def test(epoch_):
             total += targets.size(0)
             correct += predicted.eq(targets).sum().item()
 
-    logger.info(formatted_str('TEST:', epoch_, loss, correct/total))
+    logger.info(formatted_str('TEST:', epoch_, loss, correct / total))
 
     # log some info, via epoch and time[ms]
     cur_time = int((time.time() - time_start) * 1000)
@@ -192,14 +192,6 @@ def test(epoch_):
     if acc > best_acc:
         os.makedirs(args.cp_dir, exist_ok=True)
         best_acc = acc
-        if args.save:
-            logger.info('Saving..')
-            state = {
-                'net': net.state_dict(),
-                'acc': acc,
-                'epoch': epoch_,
-            }
-            torch.save(state, args.cp_dir + 'ckpt.t7')
 
 
 if __name__ == '__main__':

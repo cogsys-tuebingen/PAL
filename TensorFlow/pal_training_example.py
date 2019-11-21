@@ -35,7 +35,8 @@ class PalTrainingExample:
         np.random.seed(1)
         tf.set_random_seed(1)
 
-        workpath = os.path.dirname(os.path.dirname(sys.argv[0])) + '/'
+        workpath=os.getcwd()
+        #workpath = os.path.dirname(os.path.dirname(sys.argv[0])) + '/'
         self.check_and_create_path(workpath)
         self.__writer = tf.summary.FileWriter(workpath + "log/", filename_suffix=".event", flush_secs=10)
 
@@ -247,7 +248,7 @@ class PalTrainingExample:
 
             # Params from resnet paper https://arxiv.org/pdf/1512.03385.pdf
             res_model = Model(resnet_size=32, bottleneck=False, num_classes=10, num_filters=16, kernel_size=3,
-                              conv_stride=1, first_pool_size=None, first_pool_stride=1, block_sizes=[5,5,5],
+                              conv_stride=1, first_pool_size=None, first_pool_stride=1, block_sizes=[5, 5, 5],
                               block_strides=[1, 2, 2], resnet_version=2)
 
             # !!!IMPORTANT!!!  PAL does not support random operators like Dropout. It would support them if it
@@ -264,7 +265,7 @@ class PalTrainingExample:
 
             predicted_class = tf.argmax(y_pred, axis=1)
             acc_op, acc_update_op = tf.metrics.accuracy(y_true, predicted_class)
-            print("successfully loaded ResNet50 model")
+            print("successfully loaded ResNet32 model")
             return loss, batch_assign_ops, acc_op, acc_update_op
 
     @staticmethod
@@ -277,4 +278,4 @@ class PalTrainingExample:
 
 if __name__ == "__main__":
     example = PalTrainingExample()
-    example.train(50000)
+    example.train(25)
