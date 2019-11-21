@@ -21,11 +21,12 @@ Despite, PAL has a tendency to decrease the training loss slightly slower as oth
 For a detailed explanation, please refer to our paper.: https://arxiv.org/abs/1903.11991
 
 <img src="/Images/EFFICIENTNET_CIFAR10_train_lossMin_time120.png" title="Exemplary performance of PAL with data augmentations" alt="Exemplary Performance of PAL with dataaugmentation" width="420" />
+
 ***Fig2: Exemplary performance of PAL with data augmentation***
 
 <img src="/Images/ResNetCifarMin30.png" title="Exemplary performance of PAL without data augmentation" alt="Exemplary Performance of PAL of PAL without data augmentation" width="420" />
 
-***Fig2: Exemplary performance of PAL without data augmentation***
+***Fig3: Exemplary performance of PAL without data augmentation***
 
 ## The hyperparameters:
 
