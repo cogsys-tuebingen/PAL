@@ -37,7 +37,7 @@ For a detailed explanation, please refer to our paper.: https://arxiv.org/abs/19
 
 For a detailed explanation, please refer to our paper: https://arxiv.org/abs/1903.11991.  
 The introduced hyperparameters lead to good training and test errors:   
- Usually only the measuring step size has to be adapted slightly.
+ Usually only the measuring step size has to be adapted slightly.  
 Its sensitivity is not as high as the one of of the learning rate of SGD.  
 
 
