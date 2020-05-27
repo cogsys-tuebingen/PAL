@@ -19,8 +19,9 @@ import torchvision.transforms as transforms
 from tensorboardX import SummaryWriter
 
 from PyTorch.pal_optimizer import PalOptimizer
-from PyTorch.resnet import ResNet18
-from PyTorch.resnet import ResNet34
+from PyTorch.networks import ResNet18
+from PyTorch.networks import ResNet34
+from PyTorch.networks import DenseNet_Cifar
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -30,29 +31,29 @@ logger.addHandler(ch)
 
 parser = argparse.ArgumentParser(description='PAL Pytorch CIFAR10 Training')
 parser.add_argument('--mu', default=1.0, type=float, help='sample distance, multiple of norm gradient')
-parser.add_argument('--mss', default=10.0, type=float, help='max step size')
+parser.add_argument('--mss', default=3.6, type=float, help='max step size')
 parser.add_argument('--conjugate_gradient_factor', default=0.4, type=float, help='conjugate_gradient_factor')
 parser.add_argument('--update_step_adaptation', default=1, type=float, help='update_step_adaptation')
-# parser.add_argument('--decay_rate', default=0.95, type=float, help='decay rate for exponential decay')
-# parser.add_argument('--decay_steps', default=450, type=float, help='decay steps for exponential decay')
-parser.add_argument('--is_plot', default=False, type=bool, help='visualize lines in negative line direction,'
-                                                                'the coresponding parabolic approximation and update step')
-parser.add_argument('--model', type=str, default='resnet18')
-parser.add_argument('--epochs', type=int, default=5)
-parser.add_argument('--batch_size', type=int, default=100)
-parser.add_argument('--batch_size_test', type=int, default=100)
+parser.add_argument('--is_plot', default=True, type=bool, help='visualize lines in negative line direction,'
+                                                                'the coresponding parabolic approximation and the update step')
+parser.add_argument('--model', type=str, default='resnet34')
+parser.add_argument('--epochs', type=int, default=50)
+parser.add_argument('--batch_size', type=int, default=128)
+parser.add_argument('--batch_size_test', type=int, default=128)
 parser.add_argument('--data_dir', type=str, default='~/Data/Datasets/cifar10_data/')
 parser.add_argument('--cp_dir', type=str, default='/tmp/pt.lineopt/')
 args = parser.parse_args()
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
-best_acc = 0  # best test accuracy
+best_acc = 0  # best validation accuracy
 start_epoch = 0  # start from epoch 0 or last checkpoint epoch
 update_bar_prints_train, update_bar_prints_test = 1, 1
 
 # Data
 logger.info('==> Preparing data..')
 transform_train = transforms.Compose([
+    transforms.RandomCrop(32, padding=4),
+    transforms.RandomHorizontalFlip(),
     transforms.ToTensor(),
     transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
 ])
@@ -83,14 +84,12 @@ for k, v in vars(args).items():
 writer.add_text('device', device)
 logger.info('device: %s\n' % device)
 
-# Seed
-torch.manual_seed(1)
-
 # Model
 logger.info('==> Building model..')
 net = {
     'resnet18': ResNet18,
     'resnet34': ResNet34,
+    'densenet': DenseNet_Cifar,
 }.get(args.model.lower())()
 net = net.to(device)
 if device == 'cuda':
@@ -126,9 +125,9 @@ def train(epoch_):
         inputs, targets = inputs.to(device), targets.to(device)
         optimizer.zero_grad()
 
-        # if batch_idx==1:
-        # intitial_loss = criterion(net(inputs), targets)
-        # print("Initial Loss ", intitial_loss)
+        if batch_idx == 0 and epoch_ == 0:
+            intitial_loss = criterion(net(inputs), targets)
+            print("Initial Loss ", intitial_loss)
 
         def loss_fn(backward=True):
             out_ = net(inputs)
@@ -136,15 +135,6 @@ def train(epoch_):
             if backward:
                 loss_.backward()
             return loss_, out_
-
-        # decay if wanted:
-
-        # d_mu = args.mu * args.decay_rate ** (((epoch_ + 1) * steps_per_train_epoch + batch_idx) / args.decay_steps)
-        # d_mss = args.mss * args.decay_rate ** (((epoch_ + 1) * steps_per_train_epoch + batch_idx) / args.decay_steps)
-        #
-        # for param_group in optimizer.param_groups:
-        #     param_group['mu'] = d_mu
-        #     param_group['mss'] = d_mss
 
         loss, outputs = optimizer.step(loss_fn)
 
@@ -155,7 +145,6 @@ def train(epoch_):
     cur_time = int((time.time() - time_start))
     logger.debug('train time: {:4.2f} min'.format(cur_time / 60))
     logger.info(formatted_str('TRAIN:', epoch_, train_loss / (batch_idx + 1), correct / total))
-    # log some info, via epoch and time[ms]
 
     for s, t in [('time', cur_time), ('epoch', epoch_)]:
         writer.add_scalar('train-%s/accuracy' % s, correct / total, t)
