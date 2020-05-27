@@ -17,8 +17,8 @@ To do this, one additional point has to be meashured on the line.
 PAL performs a variable update step by jumping into the minimum of the approximated parabola.   
 PAL's performance competes ADAM's, SLS's, SGD's and RMSPRPOP's on ResNet-32, MobilenetV2, DenseNet-40 and EfficientNet architectures trained on CIFAR-10 and CIFAR100.  
 However, those are tuned by optimal piecewise constant step sizes, whereas PAL does derive its own learning rate schedule.  
-PAL surpasses all those optimizers when they are trained without a schedule.  
-Therefore we PAL could be used in scenarios where default schedules fail.  
+Thus, PAL surpasses all those optimizers when they are trained without a schedule.  
+Therefore, PAL could be used in scenarios where default schedules fail.  
 For a detailed explanation, please refer to our paper.: https://arxiv.org/abs/1903.11991
 
 <p float="left">
