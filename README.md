@@ -1,4 +1,4 @@
-# PAL - Parabolic Approximation Line Search for DNNS: 
+# PAL - Parabolic Approximation Line Search for DNNs: 
 This repository provides Tensorflow and Pytorch reference implementations for PAL.
 PAL is an An efficient and effective line search approach for DNNs which exploits the almost parabolic 
 shape of the loss in negative gradient direction to automatically estimate good step sizes.
@@ -12,7 +12,6 @@ If you have any questions or suggestions, please do not hesitate to contact me: 
 
 ***Fig1: PAL's basic idea*** 
 
-
 PAL is based on the empirical observarion that the loss function can be approximated by a one-dimensional parabola in negative gradient/line direction.
 To do this, one additional point has to be meashured on the line.  
 PAL performs a variable update step by jumping into the minimum of the approximated parabola.   
@@ -23,9 +22,9 @@ Therefore we PAL could be used in scenarios where default schedules fail.
 For a detailed explanation, please refer to our paper.: https://arxiv.org/abs/1903.11991
 
 <p float="left">
-<img src="/Images/EFFICIENTNET_CIFAR100_train_loss.png" title="Exemplary performance of PAL with data augmentations" alt="Exemplary Performance of PAL with data augmentation" width="420" />
-<img src="/Images/EFFICIENTNET_CIFAR100_eval_acc.png" title="Exemplary performance of PAL with data augmentations" alt="Exemplary Performance of PAL with data augmentation" width="420" />
-<img src="/Images/EFFICIENTNET_CIFAR100_step_sizes.png" title="Exemplary performance of PAL with data augmentations" alt="Exemplary Performance of PAL with data augmentation" width="420" />
+<img src="/Images/MOBILENETV2_CIFAR100_train_loss.png" title="Exemplary performance of PAL with data augmentations" alt="Exemplary Performance of PAL with data augmentation" width="420" />
+<img src="/Images/MOBILENETV2_CIFAR100_eval_acc.png" title="Exemplary performance of PAL with data augmentations" alt="Exemplary Performance of PAL with data augmentation" width="420" />
+<img src="/Images/MOBILENETV2_CIFAR100_step_sizes.png" title="Exemplary performance of PAL with data augmentations" alt="Exemplary Performance of PAL with data augmentation" width="420" />
 </p>
 ***Fig2: Exemplary performance of PAL with data augmentation***
 
@@ -79,13 +78,13 @@ Its sensitivity is not as high as the one of of the learning rate of SGD.
   </tr>
 </table> 
 
-## PyTorch implementation:
-- no limitations. Can be used in the same way as any other PyTorch optimizer.
+## PyTorch Implementation:
+- No limitations. Can be used in the same way as any other PyTorch optimizer.
 - Runs with PyTorch 1.4
 - Uses tensorboardX for plotting
 - Parabola approximations and loss lines can be plotted
 
-## Tensorflow implementation:
+## Tensorflow Implementation:
 - limitations:
     - The DNN must not contain any random components such as Dropout or ShakeDrop. This is because PALS requires two loss values of the same deterministic function (= two network inferences) to determine an update step. Otherwise the function would not be continuous and a parabolic approximation is not be possible. However, if these random component implementations could be changed so that drawn random numbers can be reused for at least two inferences, PAL would also support these operations. 
     - If using Dropout this has to be replaced with the adapted implementation we provide which works with PAL.
@@ -95,7 +94,7 @@ Its sensitivity is not as high as the one of of the learning rate of SGD.
 - Uses tensorboard for plotting
 - Parabola approximations and loss lines can be plotted
 
-## Virtual environment
+## Virtual Environment
 A virtual environment capable of executing the provided code can be created with the provided python_virtual_env_requirements.txt
 
 
