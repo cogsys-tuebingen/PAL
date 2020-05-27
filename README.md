@@ -1,5 +1,5 @@
 # PAL - Parabolic Approximation Line Search for DNNs: 
-This repository provides Tensorflow and Pytorch reference implementations for PAL.
+This repository provides Tensorflow and Pytorch reference implementations for PAL.  
 PAL is an efficient and effective line search approach for DNNs which exploits the almost parabolic 
 shape of the loss in negative gradient direction to automatically estimate good step sizes.
 
@@ -7,7 +7,7 @@ If you have any questions or suggestions, please do not hesitate to contact me: 
 
 ## Short introduction to PAL:
 
-<img src="/Images/explanation.png " title="PAL' basic idea" alt="PAL' basic idea" width="400"/> 
+<img src="/Images/explanation.png " title="PAL' basic idea" alt="PAL' basic idea" width="290"/> 
 <!-- d align="right"> Fig1: PAL' basic idea </a> -->
 
 ***Fig1: PAL's basic idea*** 
@@ -29,7 +29,7 @@ For a detailed explanation, please refer to our paper.: https://arxiv.org/abs/19
 
 ***Fig2: Exemplary performance of PAL with data augmentation***
 
-<img src="/Images/ResNetCifarMin30.png" title="Exemplary performance of PAL without data augmentation" alt="Exemplary Performance of PAL of PAL without data augmentation" width="420" />
+<img src="/Images/ResNetCifarMin30.png" title="Exemplary performance of PAL without data augmentation" alt="Exemplary Performance of PAL of PAL without data augmentation" width="290" />
 
 ***Fig3: Exemplary performance of PAL without data augmentation, however this leads to severe overfitting***
 
