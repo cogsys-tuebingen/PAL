@@ -1,6 +1,6 @@
 # PAL - Parabolic Approximation Line Search for DNNs: 
 This repository provides Tensorflow and Pytorch reference implementations for PAL.
-PAL is an An efficient and effective line search approach for DNNs which exploits the almost parabolic 
+PAL is an efficient and effective line search approach for DNNs which exploits the almost parabolic 
 shape of the loss in negative gradient direction to automatically estimate good step sizes.
 
 If you have any questions or suggestions, please do not hesitate to contact me: maximus.mutschler(at)uni-tuebingen.de
@@ -22,10 +22,11 @@ Therefore we PAL could be used in scenarios where default schedules fail.
 For a detailed explanation, please refer to our paper.: https://arxiv.org/abs/1903.11991
 
 <p float="left">
-<img src="/Images/MOBILENETV2_CIFAR100_train_loss.png" title="Exemplary performance of PAL with data augmentations" alt="Exemplary Performance of PAL with data augmentation" width="420" />
-<img src="/Images/MOBILENETV2_CIFAR100_eval_acc.png" title="Exemplary performance of PAL with data augmentations" alt="Exemplary Performance of PAL with data augmentation" width="420" />
-<img src="/Images/MOBILENETV2_CIFAR100_step_sizes.png" title="Exemplary performance of PAL with data augmentations" alt="Exemplary Performance of PAL with data augmentation" width="420" />
+<img src="/Images/MOBILENETV2_CIFAR100_train_loss.png" title="Exemplary performance of PAL with data augmentations" alt="Exemplary Performance of PAL with data augmentation" width="300" />
+<img src="/Images/MOBILENETV2_CIFAR100_eval_acc.png" title="Exemplary performance of PAL with data augmentations" alt="Exemplary Performance of PAL with data augmentation" width="300" />
+<img src="/Images/MOBILENETV2_CIFAR100_step_sizes.png" title="Exemplary performance of PAL with data augmentations" alt="Exemplary Performance of PAL with data augmentation" width="300" />
 </p>
+
 ***Fig2: Exemplary performance of PAL with data augmentation***
 
 <img src="/Images/ResNetCifarMin30.png" title="Exemplary performance of PAL without data augmentation" alt="Exemplary Performance of PAL of PAL without data augmentation" width="420" />
