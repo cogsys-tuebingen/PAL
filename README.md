@@ -22,9 +22,9 @@ Therefore, PAL could be used in scenarios where default schedules fail.
 For a detailed explanation, please refer to our paper.: https://arxiv.org/abs/1903.11991
 
 <p float="left">
-<img src="/Images/MOBILENETV2_CIFAR100_train_loss.png" title="Exemplary performance of PAL with data augmentations" alt="Exemplary Performance of PAL with data augmentation" width="300" />
-<img src="/Images/MOBILENETV2_CIFAR100_eval_acc.png" title="Exemplary performance of PAL with data augmentations" alt="Exemplary Performance of PAL with data augmentation" width="300" />
-<img src="/Images/MOBILENETV2_CIFAR100_step_sizes.png" title="Exemplary performance of PAL with data augmentations" alt="Exemplary Performance of PAL with data augmentation" width="300" />
+<img src="/Images/MOBILENETV2_CIFAR100_train_loss.png" title="Exemplary performance of PAL with data augmentations" alt="Exemplary Performance of PAL with data augmentation" width="290" />
+<img src="/Images/MOBILENETV2_CIFAR100_eval_acc.png" title="Exemplary performance of PAL with data augmentations" alt="Exemplary Performance of PAL with data augmentation" width="290" />
+<img src="/Images/MOBILENETV2_CIFAR100_step_sizes.png" title="Exemplary performance of PAL with data augmentations" alt="Exemplary Performance of PAL with data augmentation" width="290" />
 </p>
 
 ***Fig2: Exemplary performance of PAL with data augmentation***
