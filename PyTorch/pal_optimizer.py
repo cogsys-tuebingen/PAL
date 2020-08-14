@@ -25,7 +25,7 @@ required = _RequiredParameter()
 class PalOptimizer(Optimizer):
     def __init__(self, params=required, writer=None, measuring_step_size=1, max_step_size=3.16,
                  conjugate_gradient_factor=0.4, update_step_adaptation=1 / 0.6,
-                 epsilon=1e-10, calc_exact_directional_derivative=True, is_plot=True, plot_step_interval=100,
+                 epsilon=1e-10, calc_exact_directional_derivative=True, is_plot=False, plot_step_interval=100,
                  save_dir="/tmp/lines/"):
         """
         The PAL optimizer.
@@ -200,6 +200,7 @@ class PalOptimizer(Optimizer):
                 if s_upd > max_step_size:
                     s_upd = max_step_size.clone()
                 s_upd -= measuring_step
+
 
                 #### plotting
                 if is_plot and self.train_steps % plot_step_interval == 0:
