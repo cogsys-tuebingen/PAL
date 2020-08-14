@@ -23,6 +23,7 @@ from PyTorch.networks import ResNet18
 from PyTorch.networks import ResNet34
 from PyTorch.networks import DenseNet_Cifar
 
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 ch = logging.StreamHandler(sys.stdout)

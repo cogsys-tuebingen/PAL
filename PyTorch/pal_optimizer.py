@@ -1,6 +1,6 @@
-__author__ = "Maximus Mutschler, Kevin Laube"
+__author__ = ",  "
 __version__ = "1.1"
-__email__ = "maximus.mutschler@uni-tuebingen.de"
+__email__ = " "
 
 import os
 import time
@@ -23,9 +23,9 @@ required = _RequiredParameter()
 
 
 class PalOptimizer(Optimizer):
-    def __init__(self, params=required, writer=None, measuring_step_size=1, max_step_size=10.0,
+    def __init__(self, params=required, writer=None, measuring_step_size=1, max_step_size=3.16,
                  conjugate_gradient_factor=0.4, update_step_adaptation=1 / 0.6,
-                 epsilon=1e-10, calc_exact_directional_derivative=True, is_plot=False, plot_step_interval=100,
+                 epsilon=1e-10, calc_exact_directional_derivative=True, is_plot=True, plot_step_interval=100,
                  save_dir="/tmp/lines/"):
         """
         The PAL optimizer.
@@ -138,10 +138,10 @@ class PalOptimizer(Optimizer):
         calls the loss_fn twice
         E.g.:
         >>> def loss_fn(backward=True):
-        >>> out_ = net(inputs)
-        >>> loss_ = criterion(out_, targets)
-        >>> if backward:
-        >>>     loss_.backward()
+        >>>     out_ = net(inputs)
+        >>>     loss_ = criterion(out_, targets)
+        >>>     if backward:
+        >>>         loss_.backward()
         >>> return loss_, out_
 
         :param loss_fn: function that returns the loss as the first output
@@ -204,7 +204,7 @@ class PalOptimizer(Optimizer):
                 #### plotting
                 if is_plot and self.train_steps % plot_step_interval == 0:
                     self.plot_loss_line_and_approximation(measuring_step / 20, s_upd, measuring_step, direction_norm,
-                                                          loss_fn, a, b, loss_0, loss_mu, params,
+                                                          loss_fn_deterministic, a, b, loss_0, loss_mu, params,
                                                           save_dir)
 
                 # log some info, via batch and time[ms]
@@ -302,7 +302,7 @@ class PalOptimizer(Optimizer):
 
         plt.savefig("{0}line{1:d}.png".format(save_dir, global_step))
         print("plotted line {0}line{1:d}.png".format(save_dir, global_step))
-        # plt.show(block=True)
+        #plt.show(block=True)
         plt.close(0)
         positive_steps = sum(i > 0 for i in interval)
         self._perform_param_update_step(params, - positive_steps * resolution + mu, direction_norm)
