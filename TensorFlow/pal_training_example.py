@@ -52,15 +52,6 @@ class PalTrainingExample:
 
         global_step = tf.Variable(1.0, trainable=False, name="global_step")
 
-        # !!!IMPORTANT!!!  one could use decay for better performance
-        # maximum_step_size
-        # measuring_step_dec = tf.train.exponential_decay(0.1,
-        #                                                global_step,
-        #                                                450.0,
-        #                                                0.85, staircase=False)
-        # maximum_step_size_dec = tf.train.exponential_decay(1.0,
-        #                                                   global_step,
-        #                                                   450.0, 0.85, staircase=False)
 
         # !!!IMPORTANT!!!  PAL works outside of the graph, therefore the optimizer does not return a graph based
         # training operation. An  in-graph implementation is, as far as we know, not possible with tensorflow 1.13

@@ -1,6 +1,6 @@
-__author__ = ",  "
+__author__ = "Maximus Mutschler, Kevin Laube"
 __version__ = "1.1"
-__email__ = " "
+__email__ = "maximus.mutschler@uni-tuebingen.de"
 
 import os
 import time
@@ -24,7 +24,7 @@ required = _RequiredParameter()
 
 class PalOptimizer(Optimizer):
     def __init__(self, params=required, writer=None, measuring_step_size=1, max_step_size=3.16,
-                 conjugate_gradient_factor=0.4, update_step_adaptation=1 / 0.6,
+                 direction_adaptation_factor=0.4, update_step_adaptation=1 / 0.6,
                  epsilon=1e-10, calc_exact_directional_derivative=True, is_plot=False, plot_step_interval=100,
                  save_dir="/tmp/lines/"):
         """
@@ -36,7 +36,7 @@ class PalOptimizer(Optimizer):
         :param writer: optional tensorboardX writer for detailed logs
         :param measuring_step_size: Good values are between 0.1 and 1
         :param max_step_size:  Good values are between 1 and 10. Low sensitivity.
-        :param conjugate_gradient_factor. Good values are either 0 or 0.4. Low sensitivity.
+        :param direction_adaptation_factor. Good values are either 0 or 0.4. Low sensitivity.
         :param update_step_adaptation: loose approximation term. Good values are between 1.2 and 1.7. Low sensitivity.
         :param calc_exact_directional_derivative: more exact approximation but more time consuming
         :param is_plot: plot loss line and approximation
@@ -51,8 +51,8 @@ class PalOptimizer(Optimizer):
             raise ValueError("Invalid measuring step size: {}".format(measuring_step_size))
         if max_step_size < 0.0:
             raise ValueError("Invalid measuring maximal step size: {}".format(max_step_size))
-        if conjugate_gradient_factor < 0.0:
-            raise ValueError("Invalid measuring conjugate_gradient_factor: {}".format(conjugate_gradient_factor))
+        if direction_adaptation_factor < 0.0:
+            raise ValueError("Invalid measuring direction_adaptation_factor: {}".format(direction_adaptation_factor))
         if update_step_adaptation < 0.0:
             raise ValueError("Invalid loose approximation factor: {}".format(update_step_adaptation))
         if plot_step_interval < 1 or plot_step_interval % 1 is not 0:
@@ -62,8 +62,8 @@ class PalOptimizer(Optimizer):
             measuring_step_size = torch.tensor(measuring_step_size)
         if max_step_size is not type(torch.Tensor):
             max_step_size = torch.tensor(max_step_size)
-        if conjugate_gradient_factor is not type(torch.Tensor):
-            conjugate_gradient_factor = torch.tensor(conjugate_gradient_factor)
+        if direction_adaptation_factor is not type(torch.Tensor):
+            direction_adaptation_factor = torch.tensor(direction_adaptation_factor)
         if update_step_adaptation is not type(torch.Tensor):
             update_step_adaptation = torch.tensor(update_step_adaptation)
 
@@ -71,66 +71,66 @@ class PalOptimizer(Optimizer):
         self.train_steps = -1
         self.time_start = time.time()
         defaults = dict(measuring_step_size=measuring_step_size,
-                        max_step_size=max_step_size, conjugate_gradient_factor=conjugate_gradient_factor,
+                        max_step_size=max_step_size, direction_adaptation_factor=direction_adaptation_factor,
                         update_step_adaptation=update_step_adaptation, epsilon=epsilon,
                         calc_exact_directional_derivative=calc_exact_directional_derivative, is_plot=is_plot,
                         plot_step_interval=plot_step_interval, save_dir=save_dir)
         super(PalOptimizer, self).__init__(params, defaults)
 
-    def _set_momentum_get_norm_and_derivative(self, params, conjugate_gradient_factor, epsilon,
+    def _set_momentum_get_norm_and_derivative(self, params, direction_adaptation_factor, epsilon,
                                               calc_exact_directional_derivative):
-        """ applies conjugate_gradient_factor to the gradients and saves result in param state cg_buffer """
-        directional_derivative = torch.tensor(0.0)
-        norm = torch.tensor(0.0)
-        if conjugate_gradient_factor != 0:
-            with torch.no_grad():
+        """ applies direction_adaptation_factor to the gradients and saves result in param state cg_buffer """
+        with torch.no_grad():
+            directional_derivative = torch.tensor(0.0)
+            norm = torch.tensor(0.0)
+            if direction_adaptation_factor != 0:
                 for p in params:
                     if p.grad is None:
                         continue
                     param_state = self.state[p]
                     if 'cg_buffer' not in param_state:
-                        buf = param_state['cg_buffer'] = torch.zeros_like(p.grad.data)
+                        buf = param_state['cg_buffer'] = torch.zeros_like(p.grad.data,device=p.device)
                     else:
                         buf = param_state['cg_buffer']
-                    buf = buf.mul_(conjugate_gradient_factor)
+                    buf = buf.mul_(direction_adaptation_factor)
                     buf = buf.add_(p.grad.data)
                     flat_buf = buf.view(-1)
                     flat_grad = p.grad.data.view(-1)
                     if calc_exact_directional_derivative is True:
-                        directional_derivative += torch.dot(flat_grad, flat_buf)
-                    norm += torch.dot(flat_buf, flat_buf)
+                        directional_derivative = directional_derivative + torch.dot(flat_grad, flat_buf)
+                    norm = norm + torch.dot(flat_buf, flat_buf)
                     p.grad.data = buf.clone()
-            norm = torch.sqrt(norm)
-            if norm == 0: norm = epsilon
-            if calc_exact_directional_derivative is True:
-                directional_derivative = - directional_derivative / norm
+                norm = torch.sqrt(norm)
+                if norm == 0: norm = epsilon
+                if calc_exact_directional_derivative is True:
+                    directional_derivative = - directional_derivative / norm
+                else:
+                    directional_derivative = -norm
             else:
-                directional_derivative = -norm
-        else:
-            with torch.no_grad():
                 for p in params:
                     if p.grad is None:
                         continue
                     flat_grad = p.grad.data.view(-1)
-                    norm += torch.dot(flat_grad, flat_grad)
-            norm = torch.sqrt(norm)
-            if norm == 0: norm = epsilon
-            directional_derivative = -norm
+                    norm = norm + torch.dot(flat_grad, flat_grad)
+                norm = torch.sqrt(norm)
+                if norm == 0: norm = epsilon
+                directional_derivative = -norm
 
         return norm, directional_derivative
 
     def _perform_param_update_step(self, params, step, direction_norm):
         """ SGD-like update step of length 'measuring_step_size' in negative gradient direction """
-        if step != 0:
-            for p in params:
-                if p.grad is None:
-                    continue
-                param_state = self.state[p]
-                if 'cg_buffer' in param_state:
-                    line_direction = param_state['cg_buffer']
-                    p.data.add_(step * -line_direction / direction_norm)
-                else:
-                    p.data.add_(step * -p.grad.data / direction_norm)
+        with torch.no_grad():
+            if step != 0:
+                for p in params:
+                    if p.grad is None:
+                        continue
+                    param_state = self.state[p]
+                    if 'cg_buffer' in param_state:
+                        line_direction = param_state['cg_buffer']
+                        p.data.add_(step * -line_direction / direction_norm)
+                    else:
+                        p.data.add_(step * -p.grad.data / direction_norm)
 
     def step(self, loss_fn):
         """
@@ -148,7 +148,7 @@ class PalOptimizer(Optimizer):
                         requires 2 or more return values, e.g. also result of the forward pass
                         requires a backward parameter, whether a backward pass is required or not
                         the loss has to be backpropagated when backward is set to True
-        :return: outputs of the first loss_fn call
+        :return: outputs of the first loss_fn call and the estimated step size
         """
         seed = time.time()
 
@@ -157,13 +157,13 @@ class PalOptimizer(Optimizer):
                 return loss_fn(backward)
 
         self.train_steps += 1
-        with torch.enable_grad():  #
+        with torch.no_grad():  #
             for group in self.param_groups:
                 params = group['params']
                 measuring_step = group['measuring_step_size']
                 max_step_size = group['max_step_size']
                 update_step_adaptation = group['update_step_adaptation']
-                conjugate_gradient_factor = group['conjugate_gradient_factor']
+                direction_adaptation_factor = group['direction_adaptation_factor']
                 epsilon = group['epsilon']
                 is_plot = group['is_plot']
                 plot_step_interval = group['plot_step_interval']
@@ -171,9 +171,10 @@ class PalOptimizer(Optimizer):
                 calc_exact_directional_derivative = group['calc_exact_directional_derivative']
 
                 # get gradients for each param
-                loss_0, *returns = loss_fn_deterministic(backward=True)
+                with torch.enable_grad():
+                    loss_0, returns = loss_fn_deterministic(backward=True)
                 direction_norm, directional_derivative = self._set_momentum_get_norm_and_derivative(params,
-                                                                                                    conjugate_gradient_factor,
+                                                                                                    direction_adaptation_factor,
                                                                                                     epsilon,
                                                                                                     calc_exact_directional_derivative)
 
@@ -187,7 +188,7 @@ class PalOptimizer(Optimizer):
                 # c = loss_0
 
                 if torch.isnan(a) or torch.isnan(b) or torch.isinf(a) or torch.isinf(b):
-                    return [loss_0] + returns
+                    return loss_0 , returns, 0.0
 
                 # get jump distance
                 if a > 0 and b < 0:
@@ -223,7 +224,7 @@ class PalOptimizer(Optimizer):
 
                 self._perform_param_update_step(params, s_upd, direction_norm)
 
-                return [loss_0] + returns
+                return loss_0, returns ,((s_upd+measuring_step)/direction_norm).item()
 
     def plot_loss_line_and_approximation(self, resolution, a_min, mu, direction_norm, loss_fn, a, b, loss_0, loss_mu,
                                          params,
@@ -300,7 +301,7 @@ class PalOptimizer(Optimizer):
             axis='both',
             which='both',
             labelsize=tick_size)
-
+        plt.show(block=True)
         plt.savefig("{0}line{1:d}.png".format(save_dir, global_step))
         print("plotted line {0}line{1:d}.png".format(save_dir, global_step))
         #plt.show(block=True)
@@ -309,7 +310,7 @@ class PalOptimizer(Optimizer):
         self._perform_param_update_step(params, - positive_steps * resolution + mu, direction_norm)
 
     @contextlib.contextmanager
-    def random_seed_torch(self, seed, device=0):
+    def random_seed_torch(self, seed):
         """
         source: https://github.com/IssamLaradji/sls/
         """
@@ -324,4 +325,4 @@ class PalOptimizer(Optimizer):
             yield
         finally:
             torch.set_rng_state(cpu_rng_state)
-            torch.cuda.set_rng_state(gpu_rng_state, device)
+            torch.cuda.set_rng_state(gpu_rng_state)

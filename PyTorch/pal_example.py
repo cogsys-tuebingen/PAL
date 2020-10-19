@@ -1,5 +1,5 @@
 __author__ = "Maximus Mutschler, Kevin Laube"
-__version__ = "1.0"
+__version__ = "1.1"
 __email__ = "maximus.mutschler@uni-tuebingen.de"
 
 """
@@ -23,7 +23,6 @@ from PyTorch.networks import ResNet18
 from PyTorch.networks import ResNet34
 from PyTorch.networks import DenseNet_Cifar
 
-
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 ch = logging.StreamHandler(sys.stdout)
@@ -33,9 +32,9 @@ logger.addHandler(ch)
 parser = argparse.ArgumentParser(description='PAL Pytorch CIFAR10 Training')
 parser.add_argument('--mu', default=1.0, type=float, help='sample distance, multiple of norm gradient')
 parser.add_argument('--mss', default=3.6, type=float, help='max step size')
-parser.add_argument('--conjugate_gradient_factor', default=0.4, type=float, help='conjugate_gradient_factor')
+parser.add_argument('--direction_adaptation_factor', default=0.4, type=float, help='direction_adaptation_factor')
 parser.add_argument('--update_step_adaptation', default=1, type=float, help='update_step_adaptation')
-parser.add_argument('--is_plot', default=True, type=bool, help='visualize lines in negative line direction,'
+parser.add_argument('--is_plot', default=False, type=bool, help='visualize lines in negative line direction,'
                                                                 'the coresponding parabolic approximation and the update step')
 parser.add_argument('--model', type=str, default='resnet34')
 parser.add_argument('--epochs', type=int, default=50)
@@ -100,8 +99,8 @@ if device == 'cuda':
 criterion = nn.CrossEntropyLoss()
 optimizer = PalOptimizer(net.parameters(), writer, measuring_step_size=args.mu, max_step_size=args.mss,
                          update_step_adaptation=args.update_step_adaptation,
-                         conjugate_gradient_factor=args.conjugate_gradient_factor, is_plot=args.is_plot,
-                         plot_step_interval=100, save_dir="lines/")
+                         direction_adaptation_factor=args.direction_adaptation_factor, is_plot=args.is_plot,
+                         plot_step_interval=100, save_dir="./lines/")
 time_start = time.time()
 
 
@@ -137,7 +136,7 @@ def train(epoch_):
                 loss_.backward()
             return loss_, out_
 
-        loss, outputs = optimizer.step(loss_fn)
+        loss, outputs, _ = optimizer.step(loss_fn)
 
         train_loss += loss.item()
         _, predicted = outputs.max(1)

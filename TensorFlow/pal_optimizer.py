@@ -168,7 +168,7 @@ class PalOptimizer:
 
     def _get_loss_directional_deriv_and_save_gradient(self, additional_ops):
         """
-        Calculates loss and directionsl derivative at the current position. Saves the (adapted)
+        Calculates loss and directional derivative at the current position. Saves the (adapted)
         line direction to  line direction vars.
         :param additional_ops: additional operators that will get inferred from the graph
         :return: loss, results_of_additional_ops,
@@ -199,7 +199,7 @@ class PalOptimizer:
         Does one training step. Look at the class documentation to get the requirements needed for a successful
         update step. Approximates a 1 dimensional parabolic function along the negative gradient direction.
         If the approximation is a negative line, a step of measuring_step_size is done in line direction.
-        If the approximation is an other, unsuited parabola, no update step is done.
+        If the approximation is an unsuited parabola, no update step is done.
         :param additional_ops: additional operations that infer information from the graph
         :return: loss (before parameter update), additional_ops_results
         """
