@@ -15,17 +15,18 @@ If you have any questions or suggestions, please do not hesitate to contact me: 
 PAL is based on the empirical observarion that the loss function can be approximated by a one-dimensional parabola in negative gradient/line direction.
 To do this, one additional point has to be meashured on the line.  
 PAL performs a variable update step by jumping into the minimum of the approximated parabola.   
-PAL's performance competes ADAM's, SLS's, SGD's and RMSPRPOP's on ResNet-32, MobilenetV2, DenseNet-40 and EfficientNet architectures trained on CIFAR-10 and CIFAR100.  
-However, those are tuned by optimal piecewise constant step sizes, whereas PAL does derive its own learning rate schedule.  
+PAL surpasses SLS, ALIG, SGD-HD and COCCOB and competes against ADAM, SLS, SGD and RMSPRPOP on ResNet-32, MobilenetV2, DenseNet-40 and EfficientNet architectures trained on CIFAR-10 and CIFAR-100.  
+However, the latter are tuned by piecewise constant step sizes, whereas PAL does derive its own learning rate schedule.  
 PAL surpasses all those optimizers when they are trained without a schedule.  
 Therefore we PAL could be used in scenarios where default schedules fail.  
 For a detailed explanation, please refer to our paper.: https://arxiv.org/abs/1903.11991
 
 <p float="left">
-<img src="/Images/MobileNetV2_CIFAR-100_train_loss.png" title="Exemplary performance of PAL with data augmentations" alt="Exemplary Performance of PAL with data augmentation" width="420" />
-<img src="/Images/MobileNetV2_CIFAR-100_eval_acc.png" title="Exemplary performance of PAL with data augmentations" alt="Exemplary Performance of PAL with data augmentation" width="420" />
-<img src="/Images/MobileNetV2_CIFAR-100_step_sizes.png" title="Exemplary performance of PAL with data augmentations" alt="Exemplary Performance of PAL with data augmentation" width="420" />
+<img src="/Images/MobileNetV2_CIFAR-100_train_loss.png" title="Exemplary performance of PAL with data augmentations" alt="Exemplary Performance of PAL with data augmentation" width="380" />
+<img src="/Images/MobileNetV2_CIFAR-100_eval_acc.png" title="Exemplary performance of PAL with data augmentations" alt="Exemplary Performance of PAL with data augmentation" width="380" />
+<img src="/Images/MobileNetV2_CIFAR-100_step_sizes.png" title="Exemplary performance of PAL with data augmentations" alt="Exemplary Performance of PAL with data augmentation" width="380" />
 </p>
+
 ***Fig2: Exemplary performance of PAL with data augmentation***
 
 <img src="/Images/ResNetCifarMin30.png" title="Exemplary performance of PAL without data augmentation" alt="Exemplary Performance of PAL of PAL without data augmentation" width="420" />
