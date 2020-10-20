@@ -15,7 +15,7 @@ If you have any questions or suggestions, please do not hesitate to contact me: 
 PAL is based on the empirical observarion that the loss function can be approximated by a one-dimensional parabola in negative gradient/line direction.
 To do this, one additional point has to be meashured on the line.  
 PAL performs a variable update step by jumping into the minimum of the approximated parabola.   
-PAL surpasses SLS, ALIG, SGD-HD and COCCOB and competes against ADAM, SLS, SGD and RMSPRPOP on ResNet-32, MobilenetV2, DenseNet-40 and EfficientNet architectures trained on CIFAR-10 and CIFAR-100.  
+PAL surpasses SLS, ALIG, SGD-HD and COCOB and competes against ADAM, SLS, SGD and RMSProp on ResNet-32, MobilenetV2, DenseNet-40 and EfficientNet architectures trained on CIFAR-10 and CIFAR-100.  
 However, the latter are tuned by piecewise constant step sizes, whereas PAL does derive its own learning rate schedule.  
 PAL surpasses all those optimizers when they are trained without a schedule.  
 Therefore we PAL could be used in scenarios where default schedules fail.  
